@@ -4,49 +4,53 @@ import { VRButton } from "three/addons/webxr/VRButton.js";
 import * as Stats from "three/addons/libs/stats.module.js";
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 
+///////////////
+/* CONSTANTS */
+///////////////
+
+// Head
+const HEAD_SIZE = 10;
+const HEAD_OFFSET_X = 0;
+const HEAD_OFFSET_Y = 8;
+const HEAD_OFFSET_Z = 0;
+
+// Eyes (relative to head center)
+const EYE_SIZE = 0.8;
+const EYE_OFFSET_X = HEAD_SIZE * 0.25;
+const EYE_OFFSET_Y = HEAD_SIZE * 0.95;
+const EYE_OFFSET_Z = HEAD_SIZE * 0.55;
+
+// Torso
+const TORSO_WIDTH = 10;
+const TORSO_HEIGHT = 12;
+const TORSO_DEPTH = 5;
+
+// Arms
+const ARM_WIDTH = 2;
+const ARM_LENGTH = 5;
+const ARM_OFFSET_Y = 2;
+const ARM_OFFSET_X = TORSO_WIDTH / 2 + ARM_WIDTH / 2;
+
+// Legs
+const LEG_WIDTH = 2;
+const LEG_HEIGHT = 4;
+const LEG_OFFSET_Y = -TORSO_HEIGHT / 2 - LEG_HEIGHT / 2;
+
+// Feet
+const FOOT_WIDTH = 2.5;
+const FOOT_HEIGHT = 1;
+const FOOT_DEPTH = 3;
+const FOOT_OFFSET_Y = LEG_OFFSET_Y - LEG_HEIGHT / 2 - FOOT_HEIGHT / 2;
+
+
 //////////////////////
 /* GLOBAL VARIABLES */
 //////////////////////
 
 let camera, frontCamera, sideCamera, topCamera, perspectiveCamera;
 let scene, renderer;
-
-// Temporário:
-let table;
-
-function addTableLeg(obj, x, y, z, material) {
-    const geometry = new THREE.BoxGeometry(2, 6, 2);
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(x, y - 3, z);
-    obj.add(mesh);
-}
-  
-function addTableTop(obj, x, y, z, material) {
-    const geometry = new THREE.BoxGeometry(60, 2, 20);
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(x, y, z);
-    obj.add(mesh);
-}
-  
-function createTable(x, y, z) {
-    table = new THREE.Object3D();
-  
-    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
-  
-    addTableTop(table, 0, 0, 0, material);
-    addTableLeg(table, -25, -1, -8, material);
-    addTableLeg(table, -25, -1, 8, material);
-    addTableLeg(table, 25, -1, 8, material);
-    addTableLeg(table, 25, -1, -8, material);
-  
-    scene.add(table);
-  
-    table.position.x = x;
-    table.position.y = y;
-    table.position.z = z;
-}
-//temporário end
-
+let head;
+let robot;
 
 /////////////////////
 /* CREATE SCENE(S) */
@@ -55,7 +59,7 @@ function createScene() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color('#e8fcff');
     //scene.add(new THREE.AxesHelper(10)); //?
-    createTable(0, 8, 0);
+    createRobot(0, 0, 0);
 }
 
 //////////////////////
@@ -95,6 +99,43 @@ function createCamera() {
 ////////////////////////
 /* CREATE OBJECT3D(S) */
 ////////////////////////
+
+function addEyes(obj, x, y, z, material) {
+    const geometry = new THREE.BoxGeometry(EYE_SIZE, EYE_SIZE, EYE_SIZE);
+
+    const leftEye = new THREE.Mesh(geometry, material);
+    leftEye.position.set(x, y, z);
+    obj.add(leftEye);
+
+    const rightEye = new THREE.Mesh(geometry, material);
+    rightEye.position.set(-x, y, z);
+    obj.add(rightEye);
+}
+
+function addHead(obj, x, y, z, material) {
+    const headGroup = new THREE.Group();
+
+    const geometry = new THREE.BoxGeometry(HEAD_SIZE, HEAD_SIZE, HEAD_SIZE);
+    const head = new THREE.Mesh(geometry, material);
+    head.position.set(x, y, z);
+    headGroup.add(head);
+
+    addEyes(headGroup, EYE_OFFSET_X, EYE_OFFSET_Y, EYE_OFFSET_Z, material);
+
+    obj.add(headGroup);
+}
+
+function createRobot(x, y, z) {
+    robot = new THREE.Object3D();
+
+    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
+
+    addHead(robot, HEAD_OFFSET_X, HEAD_OFFSET_Y, HEAD_OFFSET_Z, material);
+
+    scene.add(robot);
+
+    robot.position.set(x, y, z);
+}
 
 //////////////////////
 /* CHECK COLLISIONS */
