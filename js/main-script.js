@@ -160,12 +160,12 @@ const HITCH_OFFSET_Z = TRAILER_LENGTH / 2 + HITCH_LENGTH / 2;
 
 // Coupler
 const COUPLER_RADIUS = 2;
-const COUPLER_HEIGHT = 14;
+const COUPLER_HEIGHT = 12;
 const COUPLER_OFFSET_X = HITCH_OFFSET_X;
 const COUPLER_OFFSET_Y = HITCH_OFFSET_Y;
 const COUPLER_OFFSET_Z = HITCH_OFFSET_Z + HITCH_LENGTH / 2;
 
-const COUPLER_BASE_RADIUS = 5;
+const COUPLER_BASE_RADIUS = 4;
 const COUPLER_BASE_HEIGHT = 1;
 
 const COUPLER_TOP_RADIUS = 3;
@@ -466,13 +466,13 @@ function addCoupler(obj, x, y, z, material) {
 }
 
 function addTrailerWheels(obj, material) {
-    const geo = new THREE.CylinderGeometry(
+    const wheelGeometry = new THREE.CylinderGeometry(
       TRAILER_WHEEL_RADIUS,
       TRAILER_WHEEL_RADIUS,
       TRAILER_WHEEL_WIDTH
     );
     // lay wheels horizontally
-    geo.rotateZ(Math.PI / 2);
+    wheelGeometry.rotateZ(Math.PI / 2);
   
     // four wheels (left/right, front/rear)
     const positions = [
@@ -483,7 +483,7 @@ function addTrailerWheels(obj, material) {
     ];
   
     positions.forEach(([x, y, z]) => {
-      const wheel = new THREE.Mesh(geo, material.clone());
+      const wheel = new THREE.Mesh(wheelGeometry, material.clone());
       wheel.position.set(x, y, z);
       obj.add(wheel);
     });
