@@ -190,7 +190,7 @@ function addHead(obj, x, y, z, material) {
     headGroup.position.set(x, y, z);
     headGroup.add(headMesh);
 
-    addEyes(headGroup, EYE_OFFSET_X, EYE_OFFSET_Y, EYE_OFFSET_Z, materials.eyes);
+    addEyes(headGroup, EYE_OFFSET_X, EYE_OFFSET_Y, EYE_OFFSET_Z, materials.eyes.clone());
     addAntennas(headGroup, ANTENNA_OFFSET_X, ANTENNA_OFFSET_Y, ANTENNA_OFFSET_Z, materials.antennas)
 
     obj.add(headGroup);
@@ -202,11 +202,11 @@ function addEyes(obj, x, y, z, material) {
     // Rotate so the cylinder faces forward instead of pointing up
     geometry.rotateX(Math.PI / 2);
 
-    const leftEye = new THREE.Mesh(geometry, material);
+    const leftEye = new THREE.Mesh(geometry, material.clone());
     leftEye.position.set(x, y, z);
     obj.add(leftEye);
 
-    const rightEye = new THREE.Mesh(geometry, material);
+    const rightEye = new THREE.Mesh(geometry, material.clone());
     rightEye.position.set(-x, y, z);
     obj.add(rightEye);
 }
@@ -214,11 +214,11 @@ function addEyes(obj, x, y, z, material) {
 function addAntennas(obj, x, y, z, material) {
     const geometry = new THREE.CylinderGeometry(ANTENNA_RADIUS, ANTENNA_RADIUS, ANTENNA_HEIGHT);
 
-    const leftAntenna = new THREE.Mesh(geometry, material);
+    const leftAntenna = new THREE.Mesh(geometry, material.clone());
     leftAntenna.position.set(x, y, z);
     obj.add(leftAntenna);
 
-    const rightAntenna = new THREE.Mesh(geometry, material);
+    const rightAntenna = new THREE.Mesh(geometry, material.clone());
     rightAntenna.position.set(-x, y, z);
     obj.add(rightAntenna);
 }
@@ -237,23 +237,23 @@ function addLeg(obj, side, x, y, z, material) {
     const legGroup = new THREE.Group();
     const thigh = new THREE.Mesh(
         new THREE.BoxGeometry(THIGH_WIDTH, THIGH_HEIGHT, THIGH_WIDTH),
-        materials.thighs
+        materials.thighs.clone()
     );
     thigh.position.set(x*xSign, y, z);
 
     const calf = new THREE.Mesh(
         new THREE.BoxGeometry(CALF_WIDTH, CALF_HEIGHT, CALF_WIDTH),
-        materials.calves
+        materials.calves.clone()
     );
     calf.position.y = CALF_OFFSET_Y;
 
-    addWheel(calf, LEG_WHEEL_OFFSET_X*xSign, LEG_WHEELS_OFFSET_Y - LEG_WHEELS_SPACING, 0, materials.wheels);
-    addWheel(calf, LEG_WHEEL_OFFSET_X*xSign, LEG_WHEELS_OFFSET_Y + LEG_WHEELS_SPACING, 0, materials.wheels);
+    addWheel(calf, LEG_WHEEL_OFFSET_X*xSign, LEG_WHEELS_OFFSET_Y - LEG_WHEELS_SPACING, 0, materials.wheels.clone());
+    addWheel(calf, LEG_WHEEL_OFFSET_X*xSign, LEG_WHEELS_OFFSET_Y + LEG_WHEELS_SPACING, 0, materials.wheels.clone());
     thigh.add(calf);
 
     const foot = new THREE.Mesh(
         new THREE.BoxGeometry(FOOT_WIDTH, FOOT_HEIGHT, FOOT_DEPTH),
-        materials.feet
+        materials.feet.clone()
     );
     foot.position.set(0, FOOT_OFFSET_Y, FOOT_OFFSET_Z);
     calf.add(foot);
@@ -350,17 +350,24 @@ function onResize() {
 function onKeyDown(e) {
     switch (e.keyCode) {
         case 49: // '1'
-          camera = frontCamera;
-          break;
+            camera = frontCamera;
+            break;
         case 50: // '2'
-          camera = sideCamera;
-          break;
+            camera = sideCamera;
+            break;
         case 51: // '3'
-          camera = topCamera;
-          break;
+            camera = topCamera;
+            break;
         case 52: // '4'
-          camera = perspectiveCamera;
-          break;
+            camera = perspectiveCamera;
+            break;
+        case 55:
+            robot.traverse((child) => {
+                if (child.isMesh) {
+                    child.material.wireframe = !child.material.wireframe;
+                }
+            });
+            break;
     }
 }
 
