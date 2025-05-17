@@ -58,16 +58,23 @@ const ARM_LENGTH = 5;
 const ARM_OFFSET_Y = 2;
 const ARM_OFFSET_X = TORSO_WIDTH / 2 + ARM_WIDTH / 2;
 
-// Legs
-const LEG_WIDTH = 2;
-const LEG_HEIGHT = 4;
-const LEG_OFFSET_Y = -TORSO_HEIGHT / 2 - LEG_HEIGHT / 2;
+// Thighs (offset relative to waist)
+const THIGH_WIDTH = 4.5;
+const THIGH_HEIGHT = 15;
+const THIGH_OFFSET_X = WAIST_WIDTH / 4;
+const THIGH_OFFSET_Y = -WAIST_HEIGHT / 2;
 
-// Feet
-const FOOT_WIDTH = 2.5;
-const FOOT_HEIGHT = 1;
-const FOOT_DEPTH = 3;
-const FOOT_OFFSET_Y = LEG_OFFSET_Y - LEG_HEIGHT / 2 - FOOT_HEIGHT / 2;
+// Calves (offset relative to thigh)
+const CALF_WIDTH = 6;
+const CALF_HEIGHT = 20;
+const CALF_OFFSET_Y = -THIGH_HEIGHT / 2 - CALF_HEIGHT / 2;
+
+// Feet (offset relative to calf)
+const FOOT_WIDTH = CALF_WIDTH;
+const FOOT_HEIGHT = 4.5;
+const FOOT_DEPTH = 12;
+const FOOT_OFFSET_Y = - CALF_HEIGHT / 2 - FOOT_HEIGHT / 2;
+const FOOT_OFFSET_Z = FOOT_DEPTH / 2 - CALF_WIDTH / 2;
 
 const materials = {
     torso:    new THREE.MeshBasicMaterial({ color: 0x8b0000, wireframe: false }), // dark red
@@ -159,8 +166,7 @@ function addWaist(obj, x, y, z, material) {
     waistGroup.position.set(x, y, z);
     waistGroup.add(waistMesh);
 
-    // TODO
-
+    addLegs(waistGroup, THIGH_OFFSET_X, THIGH_OFFSET_Y, 0, material);
     obj.add(waistGroup);
 }
 
@@ -203,6 +209,43 @@ function addAntennas(obj, x, y, z, material) {
     const rightAntenna = new THREE.Mesh(geometry, material);
     rightAntenna.position.set(-x, y, z);
     obj.add(rightAntenna);
+}
+
+function addLeg(obj, side, x, y, z, material) {
+    const offsetX = (side === "left" ? -1 : 1) * x;
+
+    const legGroup = new THREE.Group();
+    const thigh = new THREE.Mesh(
+        new THREE.BoxGeometry(THIGH_WIDTH, THIGH_HEIGHT, THIGH_WIDTH),
+        material
+    );
+    thigh.position.set(offsetX, y, z);
+
+    const calf = new THREE.Mesh(
+        new THREE.BoxGeometry(CALF_WIDTH, CALF_HEIGHT, CALF_WIDTH),
+        material
+    );
+    calf.position.y = CALF_OFFSET_Y;
+    thigh.add(calf);
+
+    const foot = new THREE.Mesh(
+        new THREE.BoxGeometry(FOOT_WIDTH, FOOT_HEIGHT, FOOT_DEPTH),
+        material
+    );
+    foot.position.set(0, FOOT_OFFSET_Y, FOOT_OFFSET_Z);
+    calf.add(foot);
+
+    legGroup.add(thigh);
+    obj.add(legGroup);
+}
+
+function addLegs(obj, x, y, z, material) {
+    const legsGroup = new THREE.Group();
+
+    addLeg(legsGroup, "left", x, y, z, material);
+    addLeg(legsGroup, "right", x, y, z, material);
+
+    obj.add(legsGroup);
 }
 
 function createRobot(x, y, z) {
