@@ -95,7 +95,7 @@ const FOOT_OFFSET_Z = FOOT_DEPTH / 2 - CALF_WIDTH / 2;
 // Wheels (offset relative to calf)
 const WHEEL_RADIUS = HEAD_SIZE / 2;
 const WHEEL_HEIGHT = 5;
-const LEG_WHEEL_OFFSET_X = CALF_WIDTH / 2 + WHEEL_HEIGHT / 2;
+const LEG_WHEELS_OFFSET_X = CALF_WIDTH / 2 + WHEEL_HEIGHT / 2;
 const LEG_WHEELS_OFFSET_Y = - FOOT_HEIGHT / 2;
 const LEG_WHEELS_SPACING = WHEEL_RADIUS *1.2;
 const WAIST_WHEEL_OFFSET_X = WAIST_WIDTH / 2 + WHEEL_HEIGHT / 2;
@@ -268,17 +268,32 @@ function addWaist(obj, x, y, z, material) {
 }
 
 function addHead(obj, x, y, z, material) {
+    const headPivot = new THREE.Object3D(); // Pivot for rotation
+    headPivot.position.set(x, TORSO_HEIGHT / 2, - TORSO_DEPTH / 2); // TODO: como organizamos os offsets com isto do pivot?
+
     headGroup = new THREE.Group();
 
     const geometry = new THREE.BoxGeometry(HEAD_SIZE, HEAD_SIZE, HEAD_SIZE);
     const headMesh = new THREE.Mesh(geometry, material);
-    headGroup.position.set(x, y, z);
+    headGroup.position.set(x, HEAD_SIZE / 2, HEAD_SIZE / 2);
     headGroup.add(headMesh);
 
     addEyes(headGroup, EYE_OFFSET_X, EYE_OFFSET_Y, EYE_OFFSET_Z, robotMaterials.eyes.clone());
     addAntennas(headGroup, ANTENNA_OFFSET_X, ANTENNA_OFFSET_Y, ANTENNA_OFFSET_Z, robotMaterials.antennas)
 
-    obj.add(headGroup);
+    headPivot.add(headGroup); // Add the whole head to the pivot
+    obj.add(headPivot);
+    robot.headPivot = headPivot; // Save reference for animation later
+
+    // Store rotation data
+    headPivot.userData = {
+        angle: 0,
+        rotateForward: false,
+        rotateBackward: false,
+        minAngle: -Math.PI,
+        maxAngle: 0,
+        speed: 0.02
+    };
 }
 
 function addEyes(obj, x, y, z, material) {
@@ -369,8 +384,8 @@ function addLeg(obj, side, x, y, z, material) {
     );
     calf.position.y = CALF_OFFSET_Y;
 
-    addWheel(calf, LEG_WHEEL_OFFSET_X*xSign, LEG_WHEELS_OFFSET_Y - LEG_WHEELS_SPACING, 0, robotMaterials.wheels.clone());
-    addWheel(calf, LEG_WHEEL_OFFSET_X*xSign, LEG_WHEELS_OFFSET_Y + LEG_WHEELS_SPACING, 0, robotMaterials.wheels.clone());
+    addWheel(calf, LEG_WHEELS_OFFSET_X*xSign, LEG_WHEELS_OFFSET_Y - LEG_WHEELS_SPACING, 0, robotMaterials.wheels.clone());
+    addWheel(calf, LEG_WHEELS_OFFSET_X*xSign, LEG_WHEELS_OFFSET_Y + LEG_WHEELS_SPACING, 0, robotMaterials.wheels.clone());
     thigh.add(calf);
 
     const foot = new THREE.Mesh(
@@ -515,7 +530,20 @@ function handleCollisions() {}
 ////////////
 /* UPDATE */
 ////////////
-function update() {}
+function update() {
+    const data = robot.headPivot.userData;
+
+    if (data.rotateForward && data.angle < data.maxAngle) {
+        data.angle += data.speed;
+        data.angle = Math.min(data.angle, data.maxAngle);
+    }
+    if (data.rotateBackward && data.angle > data.minAngle) {
+        data.angle -= data.speed;
+        data.angle = Math.max(data.angle, data.minAngle);
+    }
+
+    robot.headPivot.rotation.x = data.angle;
+}
 
 /////////////
 /* DISPLAY */
@@ -538,6 +566,7 @@ function init() {
     createCamera();
 
     window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
     window.addEventListener("resize", onResize);
 }
 
@@ -545,6 +574,7 @@ function init() {
 /* ANIMATION CYCLE */
 /////////////////////
 function animate() {
+    update();
     render();
 
     requestAnimationFrame(animate);
@@ -566,20 +596,20 @@ function onResize() {
 /* KEY DOWN CALLBACK */
 ///////////////////////
 function onKeyDown(e) {
-    switch (e.keyCode) {
-        case 49: // '1'
+    switch(e.key.toLowerCase()) {
+        case '1':
             camera = frontCamera;
             break;
-        case 50: // '2'
+        case '2':
             camera = sideCamera;
             break;
-        case 51: // '3'
+        case '3':
             camera = topCamera;
             break;
-        case 52: // '4'
+        case '4':
             camera = perspectiveCamera;
             break;
-        case 55: // '7'
+        case '7':
             robot.traverse((child) => {
                 if (child.isMesh) {
                     child.material.wireframe = !child.material.wireframe;
@@ -591,13 +621,28 @@ function onKeyDown(e) {
                 }
             });
             break;
+        case 'r':
+            robot.headPivot.userData.rotateBackward = true;
+            break;
+        case 'f':
+            robot.headPivot.userData.rotateForward = true;
+            break;
     }
 }
 
 ///////////////////////
 /* KEY UP CALLBACK */
 ///////////////////////
-function onKeyUp(e) {}
+function onKeyUp(e) {
+    switch(e.key.toLowerCase()) {
+        case 'r':
+            robot.headPivot.userData.rotateBackward = false;
+            break;
+        case 'f':
+            robot.headPivot.userData.rotateForward = false;
+            break;
+    }
+}
 
 init();
 animate();
