@@ -25,7 +25,7 @@ const ABDOMEN_OFFSET_Y = -TORSO_HEIGHT / 2 - ABDOMEN_HEIGHT / 2;
 const ABDOMEN_OFFSET_Z = 0;
 
 // Waist (relative to torso center)
-const WAIST_WIDTH  = 20;
+const WAIST_WIDTH  = 19;
 const WAIST_HEIGHT = 8;
 const WAIST_DEPTH  = 10;
 const WAIST_OFFSET_X = 0;
@@ -59,15 +59,16 @@ const ARM_OFFSET_Y = 2;
 const ARM_OFFSET_X = TORSO_WIDTH / 2 + ARM_WIDTH / 2;
 
 // Thighs (offset relative to waist)
-const THIGH_WIDTH = 4.5;
-const THIGH_HEIGHT = 15;
-const THIGH_OFFSET_X = WAIST_WIDTH / 4;
-const THIGH_OFFSET_Y = -WAIST_HEIGHT / 2;
+const THIGH_WIDTH = 5;
+const THIGH_HEIGHT = 10;
+const THIGH_OFFSET_Y = -WAIST_HEIGHT / 2 - THIGH_HEIGHT / 2;
 
 // Calves (offset relative to thigh)
-const CALF_WIDTH = 6;
+const CALF_WIDTH = 8.5;
 const CALF_HEIGHT = 20;
+const CALF_SPACING = 2;
 const CALF_OFFSET_Y = -THIGH_HEIGHT / 2 - CALF_HEIGHT / 2;
+const THIGH_OFFSET_X = CALF_WIDTH / 2 + CALF_SPACING / 2;
 
 // Feet (offset relative to calf)
 const FOOT_WIDTH = CALF_WIDTH;
@@ -76,13 +77,24 @@ const FOOT_DEPTH = 12;
 const FOOT_OFFSET_Y = - CALF_HEIGHT / 2 - FOOT_HEIGHT / 2;
 const FOOT_OFFSET_Z = FOOT_DEPTH / 2 - CALF_WIDTH / 2;
 
+// Wheels (offset relative to calf)
+const WHEEL_RADIUS = HEAD_SIZE / 2;
+const WHEEL_HEIGHT = 5;
+const LEG_WHEEL_OFFSET_X = CALF_WIDTH / 2 + WHEEL_HEIGHT / 2;
+const LEG_WHEELS_OFFSET_Y = - FOOT_HEIGHT / 2;
+const LEG_WHEELS_SPACING = WHEEL_RADIUS *1.2;
+
 const materials = {
     torso:    new THREE.MeshBasicMaterial({ color: 0x8b0000, wireframe: false }), // dark red
     abdomen:  new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false }), // dark navy blue
-    waist:    new THREE.MeshBasicMaterial({ color: 0x8b0000, wireframe: false }), // dark red
+    waist:    new THREE.MeshBasicMaterial({ color: 0xC0C0C0, wireframe: false }), // dark red
     head:     new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false }), // dark navy blue
     eyes:     new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: false }), // black
-    antennas: new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false })  // dark navy blue
+    antennas: new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false }), // dark navy blue
+    thighs:   new THREE.MeshBasicMaterial({ color: 0xC0C0C0, wireframe: false }), // silver
+    calves:   new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false }), // dark navy blue
+    feet:     new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false }), // dark navy blue
+    wheels:   new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: false }), // black
 };
 
 //////////////////////
@@ -100,7 +112,7 @@ let robot;
 function createScene() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color('#e8fcff');
-    createRobot(0, 0, 0);
+    createRobot(0, 10, 0);
 }
 
 //////////////////////
@@ -211,26 +223,37 @@ function addAntennas(obj, x, y, z, material) {
     obj.add(rightAntenna);
 }
 
+function addWheel(obj, x, y, z, material) {
+    const geometry = new THREE.CylinderGeometry(WHEEL_RADIUS, WHEEL_RADIUS, WHEEL_HEIGHT);
+    const wheel = new THREE.Mesh(geometry, material);
+    wheel.rotation.z = Math.PI / 2;
+    wheel.position.set(x, y, z);
+    obj.add(wheel);
+}
+
 function addLeg(obj, side, x, y, z, material) {
-    const offsetX = (side === "left" ? -1 : 1) * x;
+    const xSign = (side === "left" ? 1 : -1);
 
     const legGroup = new THREE.Group();
     const thigh = new THREE.Mesh(
         new THREE.BoxGeometry(THIGH_WIDTH, THIGH_HEIGHT, THIGH_WIDTH),
-        material
+        materials.thighs
     );
-    thigh.position.set(offsetX, y, z);
+    thigh.position.set(x*xSign, y, z);
 
     const calf = new THREE.Mesh(
         new THREE.BoxGeometry(CALF_WIDTH, CALF_HEIGHT, CALF_WIDTH),
-        material
+        materials.calves
     );
     calf.position.y = CALF_OFFSET_Y;
+
+    addWheel(calf, LEG_WHEEL_OFFSET_X*xSign, LEG_WHEELS_OFFSET_Y - LEG_WHEELS_SPACING, 0, materials.wheels);
+    addWheel(calf, LEG_WHEEL_OFFSET_X*xSign, LEG_WHEELS_OFFSET_Y + LEG_WHEELS_SPACING, 0, materials.wheels);
     thigh.add(calf);
 
     const foot = new THREE.Mesh(
         new THREE.BoxGeometry(FOOT_WIDTH, FOOT_HEIGHT, FOOT_DEPTH),
-        material
+        materials.feet
     );
     foot.position.set(0, FOOT_OFFSET_Y, FOOT_OFFSET_Z);
     calf.add(foot);
@@ -242,7 +265,7 @@ function addLeg(obj, side, x, y, z, material) {
 function addLegs(obj, x, y, z, material) {
     const legsGroup = new THREE.Group();
 
-    addLeg(legsGroup, "left", x, y, z, material);
+    addLeg(legsGroup, "left",  x, y, z, material);
     addLeg(legsGroup, "right", x, y, z, material);
 
     obj.add(legsGroup);
