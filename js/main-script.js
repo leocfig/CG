@@ -39,10 +39,11 @@ const HEAD_OFFSET_Y = TORSO_HEIGHT / 2 + HEAD_SIZE / 2;
 const HEAD_OFFSET_Z = 0;
 
 // Eyes (relative to head center)
-const EYE_SIZE = 0.9;
+const EYE_RADIUS = 0.6;
+const EYE_HEIGHT = 0.6;
 const EYE_OFFSET_X = HEAD_SIZE / 5;
 const EYE_OFFSET_Y = HEAD_SIZE / 8;
-const EYE_OFFSET_Z = HEAD_SIZE / 2 + EYE_SIZE / 2;
+const EYE_OFFSET_Z = HEAD_SIZE / 2 + EYE_HEIGHT / 2;
 
 // Antennas (relative to head center)
 const ANTENNA_RADIUS = 0.7;
@@ -178,7 +179,10 @@ function addHead(obj, x, y, z, material) {
 }
 
 function addEyes(obj, x, y, z, material) {
-    const geometry = new THREE.BoxGeometry(EYE_SIZE, EYE_SIZE, EYE_SIZE);
+    const geometry = new THREE.CylinderGeometry(EYE_RADIUS, EYE_RADIUS, EYE_HEIGHT);
+
+    // Rotate so the cylinder faces forward instead of pointing up
+    geometry.rotateX(Math.PI / 2);
 
     const leftEye = new THREE.Mesh(geometry, material);
     leftEye.position.set(x, y, z);
