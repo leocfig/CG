@@ -91,6 +91,7 @@ const WHEEL_HEIGHT = 5;
 const LEG_WHEEL_OFFSET_X = CALF_WIDTH / 2 + WHEEL_HEIGHT / 2;
 const LEG_WHEELS_OFFSET_Y = - FOOT_HEIGHT / 2;
 const LEG_WHEELS_SPACING = WHEEL_RADIUS *1.2;
+const WAIST_WHEEL_OFFSET_X = WAIST_WIDTH / 2 + WHEEL_HEIGHT / 2;
 
 const materials = {
     torso:    new THREE.MeshBasicMaterial({ color: 0x8b0000, wireframe: false }), // dark red
@@ -189,6 +190,8 @@ function addWaist(obj, x, y, z, material) {
     waistGroup.position.set(x, y, z);
     waistGroup.add(waistMesh);
 
+    addWheel(waistGroup, WAIST_WHEEL_OFFSET_X, 0, 0, materials.wheels.clone());
+    addWheel(waistGroup, - WAIST_WHEEL_OFFSET_X, 0, 0, materials.wheels.clone());
     addLegs(waistGroup, THIGH_OFFSET_X, THIGH_OFFSET_Y, 0, material);
     obj.add(waistGroup);
 }
