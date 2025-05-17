@@ -53,10 +53,18 @@ const ANTENNA_OFFSET_Y = HEAD_SIZE / 2.5;
 const ANTENNA_OFFSET_Z = 0;
 
 // Arms
-const ARM_WIDTH = 2;
-const ARM_LENGTH = 5;
-const ARM_OFFSET_Y = 2;
+const ARM_WIDTH = 7;
+const ARM_LENGTH = 17;
+const ARM_OFFSET_Y = TORSO_HEIGHT / 2 - ARM_LENGTH / 2;
 const ARM_OFFSET_X = TORSO_WIDTH / 2 + ARM_WIDTH / 2;
+const ARM_OFFSET_Z = - TORSO_DEPTH / 2 + ARM_WIDTH / 2;
+
+// Pipes
+const PIPE_RADIUS = 1.5;
+const PIPE_HEIGHT = 15;
+const PIPE_OFFSET_X = ARM_WIDTH / 2 + PIPE_RADIUS;
+const PIPE_OFFSET_Y = ARM_LENGTH / 2;
+const PIPE_OFFSET_Z = 0;
 
 // Thighs (offset relative to waist)
 const THIGH_WIDTH = 5;
@@ -87,10 +95,13 @@ const LEG_WHEELS_SPACING = WHEEL_RADIUS *1.2;
 const materials = {
     torso:    new THREE.MeshBasicMaterial({ color: 0x8b0000, wireframe: false }), // dark red
     abdomen:  new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false }), // dark navy blue
-    waist:    new THREE.MeshBasicMaterial({ color: 0xC0C0C0, wireframe: false }), // dark red
+    waist:    new THREE.MeshBasicMaterial({ color: 0xC0C0C0, wireframe: false }), // silver
     head:     new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false }), // dark navy blue
     eyes:     new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: false }), // black
     antennas: new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false }), // dark navy blue
+    arm:      new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false }), // dark navy blue
+    forearm:  new THREE.MeshBasicMaterial({ color: 0x8b0000, wireframe: false }), // dark navy blue
+    pipe:     new THREE.MeshBasicMaterial({ color: 0xC0C0C0, wireframe: false }), // silver
     thighs:   new THREE.MeshBasicMaterial({ color: 0xC0C0C0, wireframe: false }), // silver
     calves:   new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false }), // dark navy blue
     feet:     new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false }), // dark navy blue
@@ -223,6 +234,43 @@ function addAntennas(obj, x, y, z, material) {
     obj.add(rightAntenna);
 }
 
+function addPipe(obj, x, y, z, material) {
+    const geometry = new THREE.CylinderGeometry(PIPE_RADIUS, PIPE_RADIUS, PIPE_HEIGHT);  2212323
+    const pipe = new THREE.Mesh(geometry, material.clone());
+    pipe.position.set(x, y, z);
+
+    obj.add(pipe);
+}
+
+function addForearm(obj, x, y, z, material) {
+    const geometry = new THREE.BoxGeometry(ARM_WIDTH, ARM_LENGTH, ARM_WIDTH); 
+    const forearm = new THREE.Mesh(geometry, material.clone());
+    forearm.position.set(x, y, z);
+
+    obj.add(forearm);
+}
+
+function addArms(obj, x, y, z, material) {
+    const geometry = new THREE.BoxGeometry(ARM_WIDTH, ARM_LENGTH, ARM_WIDTH);
+    // Right arm
+    const rightArm = new THREE.Mesh(geometry, material.clone());
+    rightArm.position.set(x, y, z);
+
+    addPipe(rightArm, PIPE_OFFSET_X, PIPE_OFFSET_Y, PIPE_OFFSET_Z, materials.pipe);
+    addForearm(rightArm, 0 , - ARM_LENGTH, 0, materials.forearm);
+
+    obj.add(rightArm);
+
+    // Left arm
+    const leftArm = new THREE.Mesh(geometry, material.clone());
+    leftArm.position.set(-x, y, z);
+
+    addPipe(leftArm, - PIPE_OFFSET_X, PIPE_OFFSET_Y, PIPE_OFFSET_Z, materials.pipe);
+    addForearm(leftArm, 0 , - ARM_LENGTH, 0, materials.forearm);
+
+    obj.add(leftArm);
+}
+
 function addWheel(obj, x, y, z, material) {
     const geometry = new THREE.CylinderGeometry(WHEEL_RADIUS, WHEEL_RADIUS, WHEEL_HEIGHT);
     const wheel = new THREE.Mesh(geometry, material);
@@ -278,6 +326,7 @@ function createRobot(x, y, z) {
     addAbdomen(robot, ABDOMEN_OFFSET_X, ABDOMEN_OFFSET_Y, ABDOMEN_OFFSET_Z,  materials.abdomen);
     addWaist(robot, WAIST_OFFSET_X, WAIST_OFFSET_Y, WAIST_OFFSET_Z,  materials.waist);
     addHead(torso, HEAD_OFFSET_X, HEAD_OFFSET_Y, HEAD_OFFSET_Z,  materials.head);
+    addArms(torso, ARM_OFFSET_X, ARM_OFFSET_Y, ARM_OFFSET_Z, materials.arm);
 
     scene.add(robot);
 
