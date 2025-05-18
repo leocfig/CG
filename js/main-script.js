@@ -387,45 +387,90 @@ function addWheel(obj, x, y, z, material) {
     obj.add(wheel);
 }
 
-function addLeg(obj, side, x, y, z, material) {
-    const xSign = (side === "left" ? 1 : -1);
-
-    const legGroup = new THREE.Group();
-    const thigh = new THREE.Mesh(
+function addThighs(obj, x, y, z, material) {
+    const leftThigh = new THREE.Mesh(
         new THREE.BoxGeometry(THIGH_WIDTH, THIGH_HEIGHT, THIGH_WIDTH),
         robotMaterials.thighs.clone()
     );
-    thigh.position.set(x*xSign, y, z);
+    leftThigh.position.set(x, y, z);
 
-    const calf = new THREE.Mesh(
-        new THREE.BoxGeometry(CALF_WIDTH, CALF_HEIGHT, CALF_WIDTH),
-        robotMaterials.calves.clone()
-    );
-    calf.position.y = CALF_OFFSET_Y;
+    const rightThigh = leftThigh.clone();
+    rightThigh.position.x *= -1;
 
-    addWheel(calf, LEG_WHEELS_OFFSET_X*xSign, LEG_WHEELS_OFFSET_Y - LEG_WHEELS_SPACING, 0, robotMaterials.wheels.clone());
-    addWheel(calf, LEG_WHEELS_OFFSET_X*xSign, LEG_WHEELS_OFFSET_Y + LEG_WHEELS_SPACING, 0, robotMaterials.wheels.clone());
-    thigh.add(calf);
-
-    const foot = new THREE.Mesh(
-        new THREE.BoxGeometry(FOOT_WIDTH, FOOT_HEIGHT, FOOT_DEPTH),
-        robotMaterials.feet.clone()
-    );
-    foot.position.set(0, FOOT_OFFSET_Y, FOOT_OFFSET_Z);
-    calf.add(foot);
-
-    legGroup.add(thigh);
-    obj.add(legGroup);
+    obj.add(leftThigh);
+    obj.add(rightThigh);
 }
+
+function addCalves(obj, x, y, z, material) {
+    obj.children.forEach(thigh => {
+        const sign = Math.sign(thigh.position.x);
+
+        const calf = new THREE.Mesh(
+            new THREE.BoxGeometry(CALF_WIDTH, CALF_HEIGHT, CALF_WIDTH),
+            robotMaterials.calves.clone()
+        );
+        calf.position.y = CALF_OFFSET_Y;
+
+        addWheel(calf, LEG_WHEELS_OFFSET_X * sign, LEG_WHEELS_OFFSET_Y - LEG_WHEELS_SPACING, 0, robotMaterials.wheels.clone());
+        addWheel(calf, LEG_WHEELS_OFFSET_X * sign, LEG_WHEELS_OFFSET_Y + LEG_WHEELS_SPACING, 0, robotMaterials.wheels.clone());
+
+        thigh.add(calf);
+    });
+}
+
+function addFeet(obj, x, y, z, material) {
+    obj.children.forEach(thigh => {
+        const calf = thigh.children[0]; // Assumes calf is first child
+
+        const foot = new THREE.Mesh(
+            new THREE.BoxGeometry(FOOT_WIDTH, FOOT_HEIGHT, FOOT_DEPTH),
+            robotMaterials.feet.clone()
+        );
+        foot.position.set(0, FOOT_OFFSET_Y, FOOT_OFFSET_Z);
+        calf.add(foot);
+    });
+}
+
+// function addLeg(obj, side, x, y, z, material) {
+//     const xSign = (side === "left" ? 1 : -1);
+
+//     const legGroup = new THREE.Group();
+//     const thigh = new THREE.Mesh(
+//         new THREE.BoxGeometry(THIGH_WIDTH, THIGH_HEIGHT, THIGH_WIDTH),
+//         robotMaterials.thighs.clone()
+//     );
+//     thigh.position.set(x*xSign, y, z);
+
+//     const calf = new THREE.Mesh(
+//         new THREE.BoxGeometry(CALF_WIDTH, CALF_HEIGHT, CALF_WIDTH),
+//         robotMaterials.calves.clone()
+//     );
+//     calf.position.y = CALF_OFFSET_Y;
+
+//     addWheel(calf, LEG_WHEELS_OFFSET_X*xSign, LEG_WHEELS_OFFSET_Y - LEG_WHEELS_SPACING, 0, robotMaterials.wheels.clone());
+//     addWheel(calf, LEG_WHEELS_OFFSET_X*xSign, LEG_WHEELS_OFFSET_Y + LEG_WHEELS_SPACING, 0, robotMaterials.wheels.clone());
+//     thigh.add(calf);
+
+//     const foot = new THREE.Mesh(
+//         new THREE.BoxGeometry(FOOT_WIDTH, FOOT_HEIGHT, FOOT_DEPTH),
+//         robotMaterials.feet.clone()
+//     );
+//     foot.position.set(0, FOOT_OFFSET_Y, FOOT_OFFSET_Z);
+//     calf.add(foot);
+
+//     legGroup.add(thigh);
+//     obj.add(legGroup);
+// }
 
 function addLegs(obj, x, y, z, material) {
     const legsGroup = new THREE.Group();
 
-    addLeg(legsGroup, "left",  x, y, z, material);
-    addLeg(legsGroup, "right", x, y, z, material);
+    addThighs(legsGroup, x, y, z, material);
+    addCalves(legsGroup, x, y, z, material);
+    addFeet(legsGroup, x, y, z, material);
 
-    const legsPivot = new THREE.Object3D(); // Pivot for rotation
-    legsPivot.position.set(0, 0, z);        // Add the legs to the pivot
+    const legsPivot = new THREE.Object3D(); // Pivot for legs rotation
+    legsPivot.position.set(0, 0, z);
     legsPivot.add(legsGroup);
     obj.add(legsPivot);
     robot.legsPivot = legsPivot;            // Save reference for animation later
@@ -592,6 +637,20 @@ function update() {
     }
 
     robot.legsPivot.rotation.x = data.angle;
+
+    // data = robot.feetPivot.userData;
+
+    // if (data.rotateForward && data.angle < data.maxAngle) {
+    //     data.angle += data.speed;
+    //     data.angle = Math.min(data.angle, data.maxAngle);
+    // }
+    // if (data.rotateBackward && data.angle > data.minAngle) {
+    //     data.angle -= data.speed;
+    //     data.angle = Math.max(data.angle, data.minAngle);
+    // }
+
+    // robot.feetPivot.rotation.x = data.angle;
+
     updateArms();
 }
 
@@ -709,6 +768,12 @@ function onKeyDown(e) {
         case 's':
             robot.legsPivot.userData.rotateForward = true;
             break;
+        case 'q':
+            robot.feetPivot.userData.rotateBackward = true;
+            break;
+        case 'a':
+            robot.feetPivot.userData.rotateForward = true;
+            break;
         case 'e':
             robot.arms.placeArmsIn = true;
             break;
@@ -734,6 +799,12 @@ function onKeyUp(e) {
             break;
         case 's':
             robot.legsPivot.userData.rotateForward = false;
+            break;
+        case 'q':
+            robot.feetPivot.userData.rotateBackward = false;
+            break;
+        case 'a':
+            robot.feetPivot.userData.rotateForward = false;
             break;
         case 'e':
             robot.arms.placeArmsIn = false;
