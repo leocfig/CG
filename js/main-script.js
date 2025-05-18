@@ -416,8 +416,8 @@ function addLegs(obj, x, y, z, material) {
         angle: 0,
         rotateForward: false,
         rotateBackward: false,
-        minAngle: -Math.PI / 1.45,          // TOASK - pode ser assim hardcoded ou é melhor ser com base em dimensões do robô?
-        maxAngle:  Math.PI / 1.36,
+        minAngle: -Math.PI / 2,          // TOASK - pode ser assim hardcoded ou é melhor ser com base em dimensões do robô?
+        maxAngle:  Math.PI / 2,
         speed: 0.02
     }   
 }
