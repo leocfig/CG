@@ -405,7 +405,21 @@ function addLegs(obj, x, y, z, material) {
     addLeg(legsGroup, "left",  x, y, z, material);
     addLeg(legsGroup, "right", x, y, z, material);
 
-    obj.add(legsGroup);
+    const legsPivot = new THREE.Object3D(); // Pivot for rotation
+    legsPivot.position.set(0, 0, z);        // Add the legs to the pivot
+    legsPivot.add(legsGroup);
+    obj.add(legsPivot);
+    robot.legsPivot = legsPivot;            // Save reference for animation later
+
+    // Store rotation data
+    legsPivot.userData = {
+        angle: 0,
+        rotateForward: false,
+        rotateBackward: false,
+        minAngle: -Math.PI / 1.45,          // TOASK - pode ser assim hardcoded ou é melhor ser com base em dimensões do robô?
+        maxAngle:  Math.PI / 1.36,
+        speed: 0.02
+    }   
 }
 
 function createRobot(x, y, z) {
@@ -531,7 +545,10 @@ function handleCollisions() {}
 /* UPDATE */
 ////////////
 function update() {
-    const data = robot.headPivot.userData;
+
+    // TODO Refactor this code
+
+    let data = robot.headPivot.userData;
 
     if (data.rotateForward && data.angle < data.maxAngle) {
         data.angle += data.speed;
@@ -543,6 +560,19 @@ function update() {
     }
 
     robot.headPivot.rotation.x = data.angle;
+
+    data = robot.legsPivot.userData;
+
+    if (data.rotateForward && data.angle < data.maxAngle) {
+        data.angle += data.speed;
+        data.angle = Math.min(data.angle, data.maxAngle);
+    }
+    if (data.rotateBackward && data.angle > data.minAngle) {
+        data.angle -= data.speed;
+        data.angle = Math.max(data.angle, data.minAngle);
+    }
+
+    robot.legsPivot.rotation.x = data.angle;
 }
 
 /////////////
@@ -627,6 +657,12 @@ function onKeyDown(e) {
         case 'f':
             robot.headPivot.userData.rotateForward = true;
             break;
+        case 'w':
+            robot.legsPivot.userData.rotateBackward = true;
+            break;
+        case 's':
+            robot.legsPivot.userData.rotateForward = true;
+            break;
     }
 }
 
@@ -640,6 +676,12 @@ function onKeyUp(e) {
             break;
         case 'f':
             robot.headPivot.userData.rotateForward = false;
+            break;
+        case 'w':
+            robot.legsPivot.userData.rotateBackward = false;
+            break;
+        case 's':
+            robot.legsPivot.userData.rotateForward = false;
             break;
     }
 }
