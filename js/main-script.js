@@ -332,7 +332,7 @@ function addPipe(obj, x, y, z, material) {
 }
 
 function addForearm(obj, x, y, z, material) {
-    const geometry = new THREE.BoxGeometry(ARM_WIDTH, ARM_LENGTH, ARM_WIDTH); 
+    const geometry = new THREE.BoxGeometry(ARM_WIDTH, ARM_WIDTH, ARM_LENGTH); 
     const forearm = new THREE.Mesh(geometry, material.clone());
     forearm.position.set(x, y, z);
 
@@ -346,7 +346,7 @@ function addArms(obj, x, y, z, material) {
     rightArm.position.set(x, y, z);
 
     addPipe(rightArm, PIPE_OFFSET_X, PIPE_OFFSET_Y, PIPE_OFFSET_Z, robotMaterials.pipe);
-    addForearm(rightArm, 0 , - ARM_LENGTH, 0, robotMaterials.forearm);
+    addForearm(rightArm, 0 , - ARM_LENGTH / 2 - ARM_WIDTH / 2,  ARM_LENGTH / 2 - ARM_WIDTH / 2, robotMaterials.forearm);
 
     obj.add(rightArm);
 
@@ -355,7 +355,7 @@ function addArms(obj, x, y, z, material) {
     leftArm.position.set(-x, y, z);
 
     addPipe(leftArm, - PIPE_OFFSET_X, PIPE_OFFSET_Y, PIPE_OFFSET_Z, robotMaterials.pipe);
-    addForearm(leftArm, 0 , - ARM_LENGTH, 0, robotMaterials.forearm);
+    addForearm(leftArm, 0 , - ARM_LENGTH / 2 - ARM_WIDTH / 2, ARM_LENGTH / 2 - ARM_WIDTH / 2, robotMaterials.forearm);
 
     obj.add(leftArm);
 }
