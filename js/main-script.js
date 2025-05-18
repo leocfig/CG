@@ -23,22 +23,6 @@ const TORSO_OFFSET_X = 0;
 const TORSO_OFFSET_Y = 0;
 const TORSO_OFFSET_Z = 0;
 
-// Abdomen (relative to torso center)
-const ABDOMEN_WIDTH  = 14;
-const ABDOMEN_HEIGHT = 4;
-const ABDOMEN_DEPTH  = 8;
-const ABDOMEN_OFFSET_X = 0;
-const ABDOMEN_OFFSET_Y = -TORSO_HEIGHT / 2 - ABDOMEN_HEIGHT / 2;
-const ABDOMEN_OFFSET_Z = 0;
-
-// Waist (relative to torso center)
-const WAIST_WIDTH  = 19;
-const WAIST_HEIGHT = 8;
-const WAIST_DEPTH  = 10;
-const WAIST_OFFSET_X = 0;
-const WAIST_OFFSET_Y = ABDOMEN_OFFSET_Y - ABDOMEN_HEIGHT / 2 - WAIST_HEIGHT / 2;
-const WAIST_OFFSET_Z = 0;
-
 // Head (relative to torso center)
 const HEAD_SIZE = 10;
 const HEAD_OFFSET_X = 0;
@@ -61,10 +45,27 @@ const ANTENNA_OFFSET_Z = 0;
 
 // Arms
 const ARM_WIDTH = 7;
-const ARM_LENGTH = 17;
+const ARM_LENGTH = TORSO_HEIGHT;
+const FOREARM_LENGTH = TORSO_DEPTH + ARM_WIDTH
 const ARM_OFFSET_Y = TORSO_HEIGHT / 2 - ARM_LENGTH / 2;
 const ARM_OFFSET_X = TORSO_WIDTH / 2 + ARM_WIDTH / 2;
 const ARM_OFFSET_Z = - TORSO_DEPTH / 2 + ARM_WIDTH / 2;
+
+// Abdomen (relative to torso center)
+const ABDOMEN_WIDTH  = TORSO_WIDTH - 2 * ARM_WIDTH;
+const ABDOMEN_HEIGHT = ARM_WIDTH + HEAD_SIZE / 4;
+const ABDOMEN_DEPTH  = 8;
+const ABDOMEN_OFFSET_X = 0;
+const ABDOMEN_OFFSET_Y = -TORSO_HEIGHT / 2 - ABDOMEN_HEIGHT / 2;
+const ABDOMEN_OFFSET_Z = 0;
+
+// Waist (relative to torso center)
+const WAIST_WIDTH  = 19;
+const WAIST_HEIGHT = 8.5;
+const WAIST_DEPTH  = 10;
+const WAIST_OFFSET_X = 0;
+const WAIST_OFFSET_Y = ABDOMEN_OFFSET_Y - ABDOMEN_HEIGHT / 2 - WAIST_HEIGHT / 2;
+const WAIST_OFFSET_Z = 0;
 
 // Pipes
 const PIPE_RADIUS = 1.5;
@@ -79,7 +80,7 @@ const THIGH_HEIGHT = 10;
 const THIGH_OFFSET_Y = -WAIST_HEIGHT / 2 - THIGH_HEIGHT / 2;
 
 // Calves (offset relative to thigh)
-const CALF_WIDTH = 8.5;
+const CALF_WIDTH = WAIST_HEIGHT;
 const CALF_HEIGHT = 20;
 const CALF_SPACING = 2;
 const CALF_OFFSET_Y = -THIGH_HEIGHT / 2 - CALF_HEIGHT / 2;
@@ -185,7 +186,7 @@ const trailerMaterials = {
 
 let camera, frontCamera, sideCamera, topCamera, perspectiveCamera;
 let scene, renderer;
-let headGroup, waistGroup, torso;
+let headGroup, waistGroup, torso, rightArm, leftArm;
 let robot, trailer;
 
 /////////////////////
@@ -332,7 +333,7 @@ function addPipe(obj, x, y, z, material) {
 }
 
 function addForearm(obj, x, y, z, material) {
-    const geometry = new THREE.BoxGeometry(ARM_WIDTH, ARM_WIDTH, ARM_LENGTH); 
+    const geometry = new THREE.BoxGeometry(ARM_WIDTH, ARM_WIDTH, FOREARM_LENGTH); 
     const forearm = new THREE.Mesh(geometry, material.clone());
     forearm.position.set(x, y, z);
 
@@ -342,22 +343,40 @@ function addForearm(obj, x, y, z, material) {
 function addArms(obj, x, y, z, material) {
     const geometry = new THREE.BoxGeometry(ARM_WIDTH, ARM_LENGTH, ARM_WIDTH);
     // Right arm
-    const rightArm = new THREE.Mesh(geometry, material.clone());
+    rightArm = new THREE.Mesh(geometry, material.clone());
     rightArm.position.set(x, y, z);
 
     addPipe(rightArm, PIPE_OFFSET_X, PIPE_OFFSET_Y, PIPE_OFFSET_Z, robotMaterials.pipe);
-    addForearm(rightArm, 0 , - ARM_LENGTH / 2 - ARM_WIDTH / 2,  ARM_LENGTH / 2 - ARM_WIDTH / 2, robotMaterials.forearm);
+    addForearm(rightArm, 0 , - ARM_LENGTH / 2 - ARM_WIDTH / 2, FOREARM_LENGTH / 2 - ARM_WIDTH / 2, robotMaterials.forearm);
 
     obj.add(rightArm);
 
     // Left arm
-    const leftArm = new THREE.Mesh(geometry, material.clone());
+    leftArm = new THREE.Mesh(geometry, material.clone());
     leftArm.position.set(-x, y, z);
 
     addPipe(leftArm, - PIPE_OFFSET_X, PIPE_OFFSET_Y, PIPE_OFFSET_Z, robotMaterials.pipe);
-    addForearm(leftArm, 0 , - ARM_LENGTH / 2 - ARM_WIDTH / 2, ARM_LENGTH / 2 - ARM_WIDTH / 2, robotMaterials.forearm);
+    addForearm(leftArm, 0 , - ARM_LENGTH / 2 - ARM_WIDTH / 2, FOREARM_LENGTH / 2 - ARM_WIDTH / 2, robotMaterials.forearm);
 
     obj.add(leftArm);
+
+    robot.arms = {
+        placeArmsIn: false,
+        placeArmsOut: false,
+        step: ARM_WIDTH / 100,
+        left: {
+            minX: -x,
+            maxX: ARM_WIDTH - x,
+            minZ: z - ARM_WIDTH,
+            maxZ: z,
+        },
+        right: {
+            minX: x - ARM_WIDTH,
+            maxX: x,
+            minZ: z - ARM_WIDTH,
+            maxZ: z,
+        } 
+    };
 }
 
 function addWheel(obj, x, y, z, material) {
@@ -573,6 +592,33 @@ function update() {
     }
 
     robot.legsPivot.rotation.x = data.angle;
+    updateArms();
+}
+
+function updateArms() {
+    const step = robot.arms.step;
+    if (robot.arms.placeArmsIn) {
+        if (leftArm.position.z > robot.arms.left.minZ)
+            leftArm.position.z -= step;
+        else if (leftArm.position.x < robot.arms.left.maxX)
+            leftArm.position.x += step;
+
+        if (rightArm.position.z > robot.arms.right.minZ)
+            rightArm.position.z -= step;
+        else if (rightArm.position.x > robot.arms.right.minX)
+            rightArm.position.x -= step;
+    }
+    if (robot.arms.placeArmsOut) {
+        if (leftArm.position.x > robot.arms.left.minX)
+            leftArm.position.x -= step;
+        else if (leftArm.position.z < robot.arms.left.maxZ)
+            leftArm.position.z += step;
+
+        if (rightArm.position.x < robot.arms.right.maxX)
+            rightArm.position.x += step;
+        else if (rightArm.position.z < robot.arms.right.maxZ)
+            rightArm.position.z += step;
+    }
 }
 
 /////////////
@@ -663,6 +709,12 @@ function onKeyDown(e) {
         case 's':
             robot.legsPivot.userData.rotateForward = true;
             break;
+        case 'e':
+            robot.arms.placeArmsIn = true;
+            break;
+        case 'd':
+            robot.arms.placeArmsOut = true;
+            break;
     }
 }
 
@@ -682,6 +734,12 @@ function onKeyUp(e) {
             break;
         case 's':
             robot.legsPivot.userData.rotateForward = false;
+            break;
+        case 'e':
+            robot.arms.placeArmsIn = false;
+            break;
+        case 'd':
+            robot.arms.placeArmsOut = false;
             break;
     }
 }
