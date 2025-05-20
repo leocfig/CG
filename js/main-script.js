@@ -133,6 +133,7 @@ const TRAILER_OFFSET_Z = 0;
 const TRAILER_X = ROBOT_X + TORSO_WIDTH * 1.7;
 const TRAILER_Y = ROBOT_Y - ROBOT_HEIGHT / 2;
 const TRAILER_Z = ROBOT_Z - (TORSO_DEPTH + TRAILER_LENGTH) * 0.9;
+const TRAILER_SPEED = 0.5;
 
 // Trailer Base
 const TRAILER_BASE_WIDTH  = TRAILER_WIDTH;
@@ -593,6 +594,13 @@ function createTrailer(x, y, z) {
 
     scene.add(trailer);
     trailer.position.set(x, y, z);
+
+    trailer.movementVector = {
+        ArrowUp: false,
+        ArrowDown: false,
+        ArrowLeft: false,
+        ArrowRight: false,
+      };
 }
 
 //////////////////////
@@ -652,6 +660,7 @@ function update() {
     // robot.feetPivot.rotation.x = data.angle;
 
     updateArms();
+    updateTrailer();
 }
 
 function updateArms() {
@@ -678,6 +687,18 @@ function updateArms() {
         else if (rightArm.position.z < robot.arms.right.maxZ)
             rightArm.position.z += step;
     }
+}
+
+function updateTrailer(){
+    const movement = new THREE.Vector2(0, 0);
+
+    if (trailer.movementVector['ArrowUp'])      movement.y += TRAILER_SPEED;
+    if (trailer.movementVector['ArrowDown'])    movement.y -= TRAILER_SPEED;
+    if (trailer.movementVector['ArrowLeft'])    movement.x -= TRAILER_SPEED;
+    if (trailer.movementVector['ArrowRight'])   movement.x += TRAILER_SPEED;
+
+    trailer.position.x += movement.x;
+    trailer.position.y += movement.y;
 }
 
 /////////////
@@ -731,7 +752,7 @@ function onResize() {
 /* KEY DOWN CALLBACK */
 ///////////////////////
 function onKeyDown(e) {
-    switch(e.key.toLowerCase()) {
+    switch(e.key) {
         case '1':
             camera = frontCamera;
             break;
@@ -757,28 +778,42 @@ function onKeyDown(e) {
             });
             break;
         case 'r':
+        case 'R':
             robot.headPivot.userData.rotateBackward = true;
             break;
         case 'f':
+        case 'F':
             robot.headPivot.userData.rotateForward = true;
             break;
         case 'w':
+        case 'W':
             robot.legsPivot.userData.rotateBackward = true;
             break;
         case 's':
+        case '':
             robot.legsPivot.userData.rotateForward = true;
             break;
         case 'q':
+        case 'Q':
             robot.feetPivot.userData.rotateBackward = true;
             break;
         case 'a':
+        case 'A':
             robot.feetPivot.userData.rotateForward = true;
             break;
         case 'e':
+        case 'E':
             robot.arms.placeArmsIn = true;
             break;
         case 'd':
+        case 'D':
             robot.arms.placeArmsOut = true;
+            break;
+        case 'ArrowUp':
+        case 'ArrowDown':
+        case 'ArrowLeft':
+        case 'ArrowRight':
+            trailer.movementVector[e.key] = true;
             break;
     }
 }
@@ -787,30 +822,44 @@ function onKeyDown(e) {
 /* KEY UP CALLBACK */
 ///////////////////////
 function onKeyUp(e) {
-    switch(e.key.toLowerCase()) {
+    switch(e.key) {
         case 'r':
+        case 'R':
             robot.headPivot.userData.rotateBackward = false;
             break;
         case 'f':
+        case 'F':
             robot.headPivot.userData.rotateForward = false;
             break;
         case 'w':
+        case 'W':
             robot.legsPivot.userData.rotateBackward = false;
             break;
         case 's':
+        case 'S':
             robot.legsPivot.userData.rotateForward = false;
             break;
         case 'q':
+        case 'Q':
             robot.feetPivot.userData.rotateBackward = false;
             break;
         case 'a':
+        case 'A':
             robot.feetPivot.userData.rotateForward = false;
             break;
         case 'e':
+        case 'E':
             robot.arms.placeArmsIn = false;
             break;
         case 'd':
+        case 'D':
             robot.arms.placeArmsOut = false;
+            break;
+        case 'ArrowUp':
+        case 'ArrowDown':
+        case 'ArrowLeft':
+        case 'ArrowRight':
+            trailer.movementVector[e.key] = false;
             break;
     }
 }
