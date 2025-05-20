@@ -586,6 +586,14 @@ function handleCollisions() {}
 /* UPDATE */
 ////////////
 
+function update() {
+    updatePivotRotation(robot.headPivot);
+    updatePivotRotation(robot.legsPivot);
+    updatePivotRotation(robot.feetPivot);
+    updateArms();
+    updateTrailer();
+}
+
 function updatePivotRotation(pivot) {
     const data = pivot.userData;
 
@@ -599,15 +607,6 @@ function updatePivotRotation(pivot) {
     }
 
     pivot.rotation.x = data.angle;
-}
-
-function update() {
-
-    updatePivotRotation(robot.headPivot);
-    updatePivotRotation(robot.legsPivot);
-
-    updateArms();
-    updateTrailer();
 }
 
 function updateArms() {
