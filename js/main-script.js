@@ -88,7 +88,8 @@ const THIGH_OFFSET_X = CALF_WIDTH / 2 + CALF_SPACING / 2;
 
 // Feet (offset relative to calf)
 const FOOT_WIDTH = CALF_WIDTH;
-const FOOT_HEIGHT = 4.5;
+// const FOOT_HEIGHT = 5;
+const FOOT_HEIGHT = CALF_WIDTH; // chunky feet
 const FOOT_DEPTH = 12;
 const FOOT_OFFSET_Y = - CALF_HEIGHT / 2 - FOOT_HEIGHT / 2;
 const FOOT_OFFSET_Z = FOOT_DEPTH / 2 - CALF_WIDTH / 2;
@@ -388,59 +389,70 @@ function addWheel(obj, x, y, z, material) {
     obj.add(wheel);
 }
 
-function addThighs(obj, x, y, z, material) {
-    const leftThigh = new THREE.Mesh(
+function addLeg(obj, side, x, y, z, material) {
+    const xSign = (side === "left" ? 1 : -1);
+
+    const legGroup = new THREE.Group();
+    const thigh = new THREE.Mesh(
         new THREE.BoxGeometry(THIGH_WIDTH, THIGH_HEIGHT, THIGH_WIDTH),
         robotMaterials.thighs.clone()
     );
-    leftThigh.position.set(x, y, z);
+    thigh.position.set(x*xSign, y, z);
 
-    const rightThigh = leftThigh.clone();
-    rightThigh.position.x *= -1;
+    const calf = new THREE.Mesh(
+        new THREE.BoxGeometry(CALF_WIDTH, CALF_HEIGHT, CALF_WIDTH),
+        robotMaterials.calves.clone()
+    );
+    calf.position.y = CALF_OFFSET_Y;
 
-    obj.add(leftThigh);
-    obj.add(rightThigh);
-}
+    addWheel(calf, LEG_WHEELS_OFFSET_X*xSign, LEG_WHEELS_OFFSET_Y - LEG_WHEELS_SPACING, 0, robotMaterials.wheels.clone());
+    addWheel(calf, LEG_WHEELS_OFFSET_X*xSign, LEG_WHEELS_OFFSET_Y + LEG_WHEELS_SPACING, 0, robotMaterials.wheels.clone());
+    thigh.add(calf);
 
-function addCalves(obj, x, y, z, material) {
-    obj.children.forEach(thigh => {
-        const sign = Math.sign(thigh.position.x);
+    // Foot pivot
+    const footPivot = new THREE.Object3D();
+    // footPivot.position.set(0, FOOT_OFFSET_Y, 0); // chunky feet
+    footPivot.position.set(0, FOOT_OFFSET_Y, - CALF_WIDTH / 2 + FOOT_HEIGHT / 2); // regular feet
 
-        const calf = new THREE.Mesh(
-            new THREE.BoxGeometry(CALF_WIDTH, CALF_HEIGHT, CALF_WIDTH),
-            robotMaterials.calves.clone()
-        );
-        calf.position.y = CALF_OFFSET_Y;
+    const foot = new THREE.Mesh(
+        new THREE.BoxGeometry(FOOT_WIDTH, FOOT_HEIGHT, FOOT_DEPTH),
+        robotMaterials.feet.clone()
+    );
+    // foot.position.set(0, 0, FOOT_OFFSET_Z); // chunky feet
+    foot.position.set(0, 0, - FOOT_HEIGHT / 2 + FOOT_DEPTH / 2); // regular feet
 
-        addWheel(calf, LEG_WHEELS_OFFSET_X * sign, LEG_WHEELS_OFFSET_Y - LEG_WHEELS_SPACING, 0, robotMaterials.wheels.clone());
-        addWheel(calf, LEG_WHEELS_OFFSET_X * sign, LEG_WHEELS_OFFSET_Y + LEG_WHEELS_SPACING, 0, robotMaterials.wheels.clone());
+    footPivot.add(foot);
+    calf.add(footPivot);
 
-        thigh.add(calf);
-    });
-}
+    // Save reference to pivot
+    if (side === "left") {
+        robot.leftFootPivot = footPivot;
+    } else {
+        robot.rightFootPivot = footPivot;
+    }
 
-function addFeet(obj, x, y, z, material) {
-    obj.children.forEach(thigh => {
-        const calf = thigh.children[0]; // Assumes calf is first child
+    // Init pivot rotation data
+    footPivot.userData = {
+        angle: 0,
+        rotateForward: false,
+        rotateBackward: false,
+        minAngle: 0,
+        maxAngle: Math.PI / 2,
+        speed: 0.02
+    };
 
-        const foot = new THREE.Mesh(
-            new THREE.BoxGeometry(FOOT_WIDTH, FOOT_HEIGHT, FOOT_DEPTH),
-            robotMaterials.feet.clone()
-        );
-        foot.position.set(0, FOOT_OFFSET_Y, FOOT_OFFSET_Z);
-        calf.add(foot);
-    });
+    legGroup.add(thigh);
+    obj.add(legGroup);
 }
 
 function addLegs(obj, x, y, z, material) {
     const legsGroup = new THREE.Group();
 
-    addThighs(legsGroup, x, y, z, material);
-    addCalves(legsGroup, x, y, z, material);
-    addFeet(legsGroup, x, y, z, material);
+    addLeg(legsGroup, "left",  x, y, z, material);
+    addLeg(legsGroup, "right", x, y, z, material);
 
     const legsPivot = new THREE.Object3D(); // Pivot for legs rotation
-    legsPivot.position.set(0, 0, z);
+    legsPivot.position.set(0, 0, 0);
     legsPivot.add(legsGroup);
     obj.add(legsPivot);
     robot.legsPivot = legsPivot;            // Save reference for animation later
@@ -589,7 +601,8 @@ function handleCollisions() {}
 function update() {
     updatePivotRotation(robot.headPivot);
     updatePivotRotation(robot.legsPivot);
-    updatePivotRotation(robot.feetPivot);
+    updatePivotRotation(robot.leftFootPivot);
+    updatePivotRotation(robot.rightFootPivot);
     updateArms();
     updateTrailer();
 }
@@ -735,16 +748,18 @@ function onKeyDown(e) {
             robot.legsPivot.userData.rotateBackward = true;
             break;
         case 's':
-        case '':
+        case 'S':
             robot.legsPivot.userData.rotateForward = true;
             break;
         case 'q':
         case 'Q':
-            robot.feetPivot.userData.rotateBackward = true;
+            robot.leftFootPivot.userData.rotateBackward = true;
+            robot.rightFootPivot.userData.rotateBackward = true;
             break;
         case 'a':
         case 'A':
-            robot.feetPivot.userData.rotateForward = true;
+            robot.leftFootPivot.userData.rotateForward = true;
+            robot.rightFootPivot.userData.rotateForward = true;
             break;
         case 'e':
         case 'E':
@@ -786,11 +801,13 @@ function onKeyUp(e) {
             break;
         case 'q':
         case 'Q':
-            robot.feetPivot.userData.rotateBackward = false;
+            robot.leftFootPivot.userData.rotateBackward = false;
+            robot.rightFootPivot.userData.rotateBackward = false;
             break;
         case 'a':
         case 'A':
-            robot.feetPivot.userData.rotateForward = false;
+            robot.leftFootPivot.userData.rotateForward = false;
+            robot.rightFootPivot.userData.rotateForward = false;
             break;
         case 'e':
         case 'E':
