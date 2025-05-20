@@ -432,37 +432,6 @@ function addFeet(obj, x, y, z, material) {
     });
 }
 
-// function addLeg(obj, side, x, y, z, material) {
-//     const xSign = (side === "left" ? 1 : -1);
-
-//     const legGroup = new THREE.Group();
-//     const thigh = new THREE.Mesh(
-//         new THREE.BoxGeometry(THIGH_WIDTH, THIGH_HEIGHT, THIGH_WIDTH),
-//         robotMaterials.thighs.clone()
-//     );
-//     thigh.position.set(x*xSign, y, z);
-
-//     const calf = new THREE.Mesh(
-//         new THREE.BoxGeometry(CALF_WIDTH, CALF_HEIGHT, CALF_WIDTH),
-//         robotMaterials.calves.clone()
-//     );
-//     calf.position.y = CALF_OFFSET_Y;
-
-//     addWheel(calf, LEG_WHEELS_OFFSET_X*xSign, LEG_WHEELS_OFFSET_Y - LEG_WHEELS_SPACING, 0, robotMaterials.wheels.clone());
-//     addWheel(calf, LEG_WHEELS_OFFSET_X*xSign, LEG_WHEELS_OFFSET_Y + LEG_WHEELS_SPACING, 0, robotMaterials.wheels.clone());
-//     thigh.add(calf);
-
-//     const foot = new THREE.Mesh(
-//         new THREE.BoxGeometry(FOOT_WIDTH, FOOT_HEIGHT, FOOT_DEPTH),
-//         robotMaterials.feet.clone()
-//     );
-//     foot.position.set(0, FOOT_OFFSET_Y, FOOT_OFFSET_Z);
-//     calf.add(foot);
-
-//     legGroup.add(thigh);
-//     obj.add(legGroup);
-// }
-
 function addLegs(obj, x, y, z, material) {
     const legsGroup = new THREE.Group();
 
@@ -481,7 +450,7 @@ function addLegs(obj, x, y, z, material) {
         angle: 0,
         rotateForward: false,
         rotateBackward: false,
-        minAngle:  0,          // TOASK - pode ser assim hardcoded ou é melhor ser com base em dimensões do robô?
+        minAngle:  0,
         maxAngle:  Math.PI / 2,
         speed: 0.02
     }   
@@ -616,48 +585,26 @@ function handleCollisions() {}
 ////////////
 /* UPDATE */
 ////////////
+
+function updatePivotRotation(pivot) {
+    const data = pivot.userData;
+
+    if (data.rotateForward && data.angle < data.maxAngle) {
+        data.angle += data.speed;
+        data.angle = Math.min(data.angle, data.maxAngle);
+    }
+    if (data.rotateBackward && data.angle > data.minAngle) {
+        data.angle -= data.speed;
+        data.angle = Math.max(data.angle, data.minAngle);
+    }
+
+    pivot.rotation.x = data.angle;
+}
+
 function update() {
 
-    // TODO Refactor this code
-
-    let data = robot.headPivot.userData;
-
-    if (data.rotateForward && data.angle < data.maxAngle) {
-        data.angle += data.speed;
-        data.angle = Math.min(data.angle, data.maxAngle);
-    }
-    if (data.rotateBackward && data.angle > data.minAngle) {
-        data.angle -= data.speed;
-        data.angle = Math.max(data.angle, data.minAngle);
-    }
-
-    robot.headPivot.rotation.x = data.angle;
-
-    data = robot.legsPivot.userData;
-
-    if (data.rotateForward && data.angle < data.maxAngle) {
-        data.angle += data.speed;
-        data.angle = Math.min(data.angle, data.maxAngle);
-    }
-    if (data.rotateBackward && data.angle > data.minAngle) {
-        data.angle -= data.speed;
-        data.angle = Math.max(data.angle, data.minAngle);
-    }
-
-    robot.legsPivot.rotation.x = data.angle;
-
-    // data = robot.feetPivot.userData;
-
-    // if (data.rotateForward && data.angle < data.maxAngle) {
-    //     data.angle += data.speed;
-    //     data.angle = Math.min(data.angle, data.maxAngle);
-    // }
-    // if (data.rotateBackward && data.angle > data.minAngle) {
-    //     data.angle -= data.speed;
-    //     data.angle = Math.max(data.angle, data.minAngle);
-    // }
-
-    // robot.feetPivot.rotation.x = data.angle;
+    updatePivotRotation(robot.headPivot);
+    updatePivotRotation(robot.legsPivot);
 
     updateArms();
     updateTrailer();
@@ -732,7 +679,6 @@ function init() {
 function animate() {
     update();
     render();
-
     requestAnimationFrame(animate);
 }
 
