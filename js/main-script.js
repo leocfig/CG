@@ -103,6 +103,7 @@ const LEG_WHEELS_SPACING = WHEEL_RADIUS *1.2;
 const WAIST_WHEEL_OFFSET_X = WAIST_WIDTH / 2 + WHEEL_HEIGHT / 2;
 
 const ROBOT_HEIGHT = HEAD_SIZE + TORSO_HEIGHT + ABDOMEN_HEIGHT + WAIST_HEIGHT + THIGH_HEIGHT + CALF_HEIGHT;
+const ROTATION_SPEED = 2;
 
 const materials = {
     darkBlue: new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false }), // dark navy blue
@@ -142,7 +143,7 @@ const TRAILER_WHEEL_OFFSET_Z = TRAILER_LENGTH / 2 - TRAILER_WHEEL_INSET_Z;
 const TRAILER_X = ROBOT_X + TORSO_WIDTH * 1.7;
 const TRAILER_Y = ROBOT_Y + WAIST_OFFSET_Y + TRAILER_HEIGHT / 2;
 const TRAILER_Z = ROBOT_Z - (TORSO_DEPTH + TRAILER_LENGTH) * 0.8;
-const TRAILER_SPEED = 0.5;
+const TRAILER_SPEED = 15;
 
 // Hitch piece (relative to trailer center)
 const HITCH_WIDTH  = CALF_SPACING;
@@ -175,6 +176,7 @@ const size = 50;
 let scene, renderer;
 let headGroup, waistGroup, torso, rightArm, leftArm;
 let robot, trailer;
+const clock = new THREE.Clock();
 
 /////////////////////
 /* CREATE SCENE(S) */
@@ -311,7 +313,7 @@ function addHead(obj, x, y, z, material) {
         rotateBackward: false,
         minAngle: -Math.PI,
         maxAngle: 0,
-        speed: 0.02
+        speed: ROTATION_SPEED
     };
 }
 
@@ -381,7 +383,7 @@ function addArms(obj, x, y, z, material) {
     robot.arms = {
         placeArmsIn: false,
         placeArmsOut: false,
-        step: ARM_WIDTH / 100,
+        step: ARM_WIDTH,
         left: {
             minX: -x,
             maxX: ARM_WIDTH - x,
@@ -393,7 +395,7 @@ function addArms(obj, x, y, z, material) {
             maxX: x,
             minZ: z - ARM_WIDTH,
             maxZ: z,
-        } 
+        },
     };
 }
 
@@ -454,7 +456,7 @@ function addLeg(obj, side, x, y, z, material) {
         rotateBackward: false,
         minAngle: 0,
         maxAngle: Math.PI / 2,
-        speed: 0.02
+        speed: ROTATION_SPEED
     };
 
     legGroup.add(thigh);
@@ -480,7 +482,7 @@ function addLegs(obj, x, y, z, material) {
         rotateBackward: false,
         minAngle:  0,
         maxAngle:  Math.PI / 2,
-        speed: 0.02
+        speed: ROTATION_SPEED
     }   
 }
 
@@ -625,58 +627,74 @@ function handleCollisions() {}
 ////////////
 
 function update() {
-    updatePivotRotation(robot.headPivot);
-    updatePivotRotation(robot.legsPivot);
-    updatePivotRotation(robot.leftFootPivot);
-    updatePivotRotation(robot.rightFootPivot);
-    updateArms();
-    updateTrailer();
+    const delta = clock.getDelta();
+
+    updatePivotRotation(robot.headPivot, delta);
+    updatePivotRotation(robot.legsPivot, delta);
+    updatePivotRotation(robot.leftFootPivot, delta);
+    updatePivotRotation(robot.rightFootPivot, delta);
+    updateArms(delta);
+    updateTrailer(delta);
 }
 
-function updatePivotRotation(pivot) {
+function updatePivotRotation(pivot, delta) {
     const data = pivot.userData;
 
     if (data.rotateForward && data.angle < data.maxAngle) {
-        data.angle += data.speed;
+        data.angle += data.speed * delta;
         data.angle = Math.min(data.angle, data.maxAngle);
     }
     if (data.rotateBackward && data.angle > data.minAngle) {
-        data.angle -= data.speed;
+        data.angle -= data.speed * delta;
         data.angle = Math.max(data.angle, data.minAngle);
     }
 
     pivot.rotation.x = data.angle;
 }
 
-function updateArms() {
-    const step = robot.arms.step;
+function updateArms(delta) {
+    var step = robot.arms.step * delta;
     const leftDelta = new THREE.Vector3(0, 0, 0);
     const rightDelta = new THREE.Vector3(0, 0, 0);
     if (robot.arms.placeArmsIn) {
-        if (leftArm.position.z > robot.arms.left.minZ)          leftDelta.z -= step; 
-        else if (leftArm.position.x < robot.arms.left.maxX)     leftDelta.x += step;
-
-        if (rightArm.position.z > robot.arms.right.minZ)        rightDelta.z -= step;
-        else if (rightArm.position.x > robot.arms.right.minX)   rightDelta.x -= step;
+        if (leftArm.position.z > robot.arms.left.minZ && rightArm.position.z > robot.arms.right.minZ) {
+            // Prevent overshooting: clamp step to reach target Z exactly
+            step = Math.min(step, leftArm.position.z - robot.arms.left.minZ)
+            leftDelta.z -= step;
+            rightDelta.z -= step;
+        }           
+        else if (leftArm.position.x < robot.arms.left.maxX && rightArm.position.x > robot.arms.right.minX) {
+            // Prevent overshooting: clamp step to reach target X exactly
+            step = Math.min(step, robot.arms.left.maxX - leftArm.position.x);
+            leftDelta.x += step;
+            rightDelta.x -= step; 
+        }   
     }
     if (robot.arms.placeArmsOut) {
-        if (leftArm.position.x > robot.arms.left.minX)          leftDelta.x -= step;
-        else if (leftArm.position.z < robot.arms.left.maxZ)     leftDelta.z += step;
-
-        if (rightArm.position.x < robot.arms.right.maxX)        rightDelta.x += step;
-        else if (rightArm.position.z < robot.arms.right.maxZ)   rightDelta.z += step;
+        if (leftArm.position.x > robot.arms.left.minX && rightArm.position.x < robot.arms.right.maxX) {
+            // Prevent overshooting: clamp step to reach target X exactly
+            step = Math.min(step, leftArm.position.x - robot.arms.left.minX);
+            leftDelta.x -= step;
+            rightDelta.x += step;
+        }           
+        else if (leftArm.position.z < robot.arms.left.maxZ && rightArm.position.z < robot.arms.right.maxZ) {
+            // Prevent overshooting: clamp step to reach target Z exactly
+            step = Math.min(step, robot.arms.left.maxZ - leftArm.position.z);
+            leftDelta.z += step;
+            rightDelta.z += step;
+        }   
     }
     leftArm.position.add(leftDelta);
     rightArm.position.add(rightDelta);
 }
 
-function updateTrailer(){
+function updateTrailer(delta){
     const movement = new THREE.Vector3(0, 0, 0);
 
-    if (trailer.movementVector['ArrowUp'])      movement.z -= TRAILER_SPEED;
-    if (trailer.movementVector['ArrowDown'])    movement.z += TRAILER_SPEED;
-    if (trailer.movementVector['ArrowLeft'])    movement.x -= TRAILER_SPEED;
-    if (trailer.movementVector['ArrowRight'])   movement.x += TRAILER_SPEED;
+    if (trailer.movementVector['ArrowUp'])      movement.z -= TRAILER_SPEED * delta;
+    if (trailer.movementVector['ArrowDown'])    movement.z += TRAILER_SPEED * delta;
+    if (trailer.movementVector['ArrowLeft'])    movement.x -= TRAILER_SPEED * delta;
+    if (trailer.movementVector['ArrowRight'])   movement.x += TRAILER_SPEED * delta;
 
     trailer.position.add(movement);
 }
