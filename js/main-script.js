@@ -88,11 +88,9 @@ const THIGH_OFFSET_X = CALF_WIDTH / 2 + CALF_SPACING / 2;
 
 // Feet (offset relative to calf)
 const FOOT_WIDTH = CALF_WIDTH;
-// const FOOT_HEIGHT = 5;
-const FOOT_HEIGHT = CALF_WIDTH; // chunky feet
+const FOOT_HEIGHT = CALF_WIDTH;
 const FOOT_DEPTH = 12;
 const FOOT_OFFSET_Y = - CALF_HEIGHT / 2 - FOOT_HEIGHT / 2;
-const FOOT_OFFSET_Z = FOOT_DEPTH / 2 - CALF_WIDTH / 2;
 
 // Wheels (offset relative to calf)
 const WHEEL_RADIUS = HEAD_SIZE / 2;
@@ -126,9 +124,9 @@ const TRAILER_OFFSET_Z = 0;
 const TRAILER_BASE_WIDTH  = TRAILER_WIDTH;
 const TRAILER_BASE_HEIGHT = 4;
 const TRAILER_BASE_LENGTH = TRAILER_LENGTH;
-const TRAILER_BASE_OFFSET_X = 0;
-const TRAILER_BASE_OFFSET_Y = -TRAILER_HEIGHT / 2 + TRAILER_BASE_HEIGHT / 2;
-const TRAILER_BASE_OFFSET_Z = 0;
+const TRAILER_BASE_OFFSET_X = TRAILER_OFFSET_X;
+const TRAILER_BASE_OFFSET_Y = TRAILER_OFFSET_Y -TRAILER_HEIGHT / 2 - TRAILER_BASE_HEIGHT / 2;
+const TRAILER_BASE_OFFSET_Z = TRAILER_OFFSET_Z;
 
 // Wheels (relative to trailer center)
 const TRAILER_WHEEL_INSET_RATIO = 0.15; // 15% of the trailer length
@@ -148,7 +146,7 @@ const TRAILER_SPEED = 15;
 // Hitch piece (relative to trailer center)
 const HITCH_WIDTH  = CALF_SPACING;
 const HITCH_HEIGHT = TRAILER_BASE_HEIGHT;
-const HITCH_LENGTH = 10;
+const HITCH_LENGTH = 7;
 const HITCH_OFFSET_X = 0;
 const HITCH_OFFSET_Y = TRAILER_BASE_OFFSET_Y;
 const HITCH_OFFSET_Z = TRAILER_LENGTH / 2 + HITCH_LENGTH / 2;
@@ -345,7 +343,7 @@ function addAntennas(obj, x, y, z, material) {
 }
 
 function addPipe(obj, x, y, z, material) {
-    const geometry = new THREE.CylinderGeometry(PIPE_RADIUS, PIPE_RADIUS, PIPE_HEIGHT);  2212323
+    const geometry = new THREE.CylinderGeometry(PIPE_RADIUS, PIPE_RADIUS, PIPE_HEIGHT);
     const pipe = new THREE.Mesh(geometry, material);
     pipe.position.set(x, y, z);
 
@@ -429,15 +427,13 @@ function addLeg(obj, side, x, y, z, material) {
 
     // Foot pivot
     const footPivot = new THREE.Object3D();
-    // footPivot.position.set(0, FOOT_OFFSET_Y, 0); // chunky feet
-    footPivot.position.set(0, FOOT_OFFSET_Y, - CALF_WIDTH / 2 + FOOT_HEIGHT / 2); // regular feet
+    footPivot.position.set(0, FOOT_OFFSET_Y, - CALF_WIDTH / 2 + FOOT_HEIGHT / 2);
 
     const foot = new THREE.Mesh(
         new THREE.BoxGeometry(FOOT_WIDTH, FOOT_HEIGHT, FOOT_DEPTH),
         materials.darkBlue
     );
-    // foot.position.set(0, 0, FOOT_OFFSET_Z); // chunky feet
-    foot.position.set(0, 0, - FOOT_HEIGHT / 2 + FOOT_DEPTH / 2); // regular feet
+    foot.position.set(0, 0, - FOOT_HEIGHT / 2 + FOOT_DEPTH / 2);
 
     footPivot.add(foot);
     calf.add(footPivot);
@@ -615,12 +611,41 @@ function createTrailer(x, y, z) {
 //////////////////////
 /* CHECK COLLISIONS */
 //////////////////////
-function checkCollisions() {}
+function checkCollisions() {
+    updateAABB(robot);
+    updateAABB(trailer);
+
+    if (checkAABBIntersection(robot.aabb, trailer.aabb)) {
+        handleCollisions();
+    }
+}
+
+function checkAABBIntersection(a, b) {
+    return (
+        a.min.x <= b.max.x && a.max.x >= b.min.x &&
+        a.min.y <= b.max.y && a.max.y >= b.min.y &&
+        a.min.z <= b.max.z && a.max.z >= b.min.z
+    );
+}
 
 ///////////////////////
 /* HANDLE COLLISIONS */
 ///////////////////////
-function handleCollisions() {}
+function handleCollisions() {
+    if (!isInTruckMode()) return;
+
+    // trailer.userData.engaged = true;
+
+    // // Calcula ponto de acoplamento com base no robot
+    // const couplingPoint = new THREE.Vector3();
+    // couplingPoint.setFromMatrixPosition(robot.matrixWorld);
+    // couplingPoint.x += 50; // ou o valor exato para o ponto de encaixe
+    // couplingPoint.y = trailer.position.y;
+    // couplingPoint.z = trailer.position.z;
+
+    // Move o trailer suavemente para o ponto de acoplamento
+    trailer.position.lerp(couplingPoint, 0.2);
+}
 
 ////////////
 /* UPDATE */
@@ -635,6 +660,7 @@ function update() {
     updatePivotRotation(robot.rightFootPivot, delta);
     updateArms(delta);
     updateTrailer(delta);
+    checkCollisions();
 }
 
 function updatePivotRotation(pivot, delta) {
@@ -697,6 +723,36 @@ function updateTrailer(delta){
     if (trailer.movementVector['ArrowRight'])   movement.x += TRAILER_SPEED * delta;
 
     trailer.position.add(movement);
+}
+
+function updateAABB(obj) {
+    const box = new THREE.Box3().setFromObject(obj);
+    obj.aabb.min.copy(box.min);
+    obj.aabb.max.copy(box.max);
+}
+
+function approxEqual(a, b, epsilon = 0.01) {
+    return Math.abs(a - b) < epsilon;
+}
+
+function isInTruckMode() {
+
+    // // Small tolerance value used for safe floating point comparisons
+    const EPSILON = 0.02;
+    const headOK = Math.abs(robot.headPivot.rotation.x + Math.PI) < EPSILON;
+    const legOK = Math.abs(robot.legsPivot.rotation.x - Math.PI / 2) < EPSILON;
+    const feetOK = Math.abs(robot.leftFootPivot.rotation.x - Math.PI / 2) < EPSILON;
+
+    const leftArmOK = (
+        Math.abs(leftArm.position.z - robot.arms.left.minZ) < EPSILON &&
+        Math.abs(leftArm.position.x - robot.arms.left.maxX) < EPSILON
+    );
+    const rightArmOK = (
+        Math.abs(rightArm.position.z - robot.arms.right.minZ) < EPSILON &&
+        Math.abs(rightArm.position.x - robot.arms.right.minX) < EPSILON
+    );
+
+    return headOK && legOK && feetOK && leftArmOK && rightArmOK;
 }
 
 /////////////
