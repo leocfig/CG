@@ -130,12 +130,6 @@ const TRAILER_OFFSET_X = 0;
 const TRAILER_OFFSET_Y = 0;
 const TRAILER_OFFSET_Z = 0;
 
-// Trailer starting position
-const TRAILER_X = ROBOT_X + TORSO_WIDTH * 1.7;
-const TRAILER_Y = ROBOT_Y - ROBOT_HEIGHT / 2;
-const TRAILER_Z = ROBOT_Z - (TORSO_DEPTH + TRAILER_LENGTH) * 0.9;
-const TRAILER_SPEED = 0.5;
-
 // Trailer Base
 const TRAILER_BASE_WIDTH  = TRAILER_WIDTH;
 const TRAILER_BASE_HEIGHT = 4;
@@ -153,16 +147,22 @@ const TRAILER_WHEEL_OFFSET_X = TRAILER_WIDTH / 2 + TRAILER_WHEEL_WIDTH / 2;
 const TRAILER_WHEEL_OFFSET_Y = -TRAILER_HEIGHT / 2;
 const TRAILER_WHEEL_OFFSET_Z = TRAILER_LENGTH / 2 - TRAILER_WHEEL_INSET_Z;
 
+// Trailer starting position
+const TRAILER_X = ROBOT_X + TORSO_WIDTH * 1.7;
+const TRAILER_Y = ROBOT_Y + WAIST_OFFSET_Y + TRAILER_HEIGHT / 2;
+const TRAILER_Z = ROBOT_Z - (TORSO_DEPTH + TRAILER_LENGTH) * 0.9;
+const TRAILER_SPEED = 0.5;
+
 // Hitch piece (relative to trailer center)
-const HITCH_WIDTH  = 3;
+const HITCH_WIDTH  = CALF_SPACING;
 const HITCH_HEIGHT = TRAILER_BASE_HEIGHT;
-const HITCH_LENGTH = 15;
+const HITCH_LENGTH = 10;
 const HITCH_OFFSET_X = 0;
 const HITCH_OFFSET_Y = TRAILER_BASE_OFFSET_Y;
 const HITCH_OFFSET_Z = TRAILER_LENGTH / 2 + HITCH_LENGTH / 2;
 
 // Coupler
-const COUPLER_RADIUS = 2;
+const COUPLER_RADIUS = CALF_SPACING / 2;
 const COUPLER_HEIGHT = 12;
 const COUPLER_OFFSET_X = HITCH_OFFSET_X;
 const COUPLER_OFFSET_Y = HITCH_OFFSET_Y;
@@ -479,6 +479,11 @@ function createRobot(x, y, z) {
 
     scene.add(robot);
     robot.position.set(x, y, z);
+
+    robot.aabb = {
+        min: new THREE.Vector3(),
+        max: new THREE.Vector3()
+    };
 }
 
 function addTrailerBody(obj, x, y, z, material) {
@@ -581,7 +586,12 @@ function createTrailer(x, y, z) {
         ArrowDown: false,
         ArrowLeft: false,
         ArrowRight: false,
-      };
+    };
+
+    trailer.aabb = {
+        min: new THREE.Vector3(),
+        max: new THREE.Vector3()
+    };
 }
 
 //////////////////////
@@ -626,7 +636,7 @@ function updateArms() {
     const step = robot.arms.step;
     if (robot.arms.placeArmsIn) {
         if (leftArm.position.z > robot.arms.left.minZ)
-            leftArm.position.z -= step;
+            leftArm.position.z -= step; // MUDAR
         else if (leftArm.position.x < robot.arms.left.maxX)
             leftArm.position.x += step;
 
@@ -649,15 +659,15 @@ function updateArms() {
 }
 
 function updateTrailer(){
-    const movement = new THREE.Vector2(0, 0);
+    const movement = new THREE.Vector3(0, 0, 0);
 
-    if (trailer.movementVector['ArrowUp'])      movement.y += TRAILER_SPEED;
-    if (trailer.movementVector['ArrowDown'])    movement.y -= TRAILER_SPEED;
+    if (trailer.movementVector['ArrowUp'])      movement.z -= TRAILER_SPEED;
+    if (trailer.movementVector['ArrowDown'])    movement.z += TRAILER_SPEED;
     if (trailer.movementVector['ArrowLeft'])    movement.x -= TRAILER_SPEED;
     if (trailer.movementVector['ArrowRight'])   movement.x += TRAILER_SPEED;
 
     trailer.position.x += movement.x;
-    trailer.position.y += movement.y;
+    trailer.position.z += movement.z;
 }
 
 /////////////
