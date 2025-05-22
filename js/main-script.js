@@ -12,8 +12,8 @@ import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 
 // Robot starting position
 const ROBOT_X = -20;
-const ROBOT_Y = 10;
-const ROBOT_Z = 40;
+const ROBOT_Y = 20;
+const ROBOT_Z = 30;
 
 // Torso
 const TORSO_WIDTH = 30;
@@ -150,7 +150,7 @@ const TRAILER_WHEEL_OFFSET_Z = TRAILER_LENGTH / 2 - TRAILER_WHEEL_INSET_Z;
 // Trailer starting position
 const TRAILER_X = ROBOT_X + TORSO_WIDTH * 1.7;
 const TRAILER_Y = ROBOT_Y + WAIST_OFFSET_Y + TRAILER_HEIGHT / 2;
-const TRAILER_Z = ROBOT_Z - (TORSO_DEPTH + TRAILER_LENGTH) * 0.9;
+const TRAILER_Z = ROBOT_Z - (TORSO_DEPTH + TRAILER_LENGTH) * 0.8;
 const TRAILER_SPEED = 0.5;
 
 // Hitch piece (relative to trailer center)
@@ -186,7 +186,9 @@ const trailerMaterials = {
 /* GLOBAL VARIABLES */
 //////////////////////
 
-let camera, frontCamera, sideCamera, topCamera, perspectiveCamera;
+let camera, orthoCamera, perspectiveCamera;
+const aspect = window.innerWidth / window.innerHeight;
+const size = 50;
 let scene, renderer;
 let headGroup, waistGroup, torso, rightArm, leftArm;
 let robot, trailer;
@@ -206,28 +208,59 @@ function createScene() {
 //////////////////////
 
 function createCamera() {
-    const aspect = window.innerWidth / window.innerHeight;
-    const size = 50;
-
-    // Orthographic Cameras: front, side, top
-    frontCamera = new THREE.OrthographicCamera(-size * aspect, size * aspect, size, -size, 1, 1000);
-    frontCamera.position.set(0, 0, 100);
-    frontCamera.lookAt(scene.position);
-
-    sideCamera = new THREE.OrthographicCamera(-size * aspect, size * aspect, size, -size, 1, 1000);
-    sideCamera.position.set(100, 0, 0);
-    sideCamera.lookAt(scene.position);
-
-    topCamera = new THREE.OrthographicCamera(-size * aspect, size * aspect, size, -size, 1, 1000);
-    topCamera.position.set(0, 100, 0);
-    topCamera.lookAt(scene.position);
-
-    // Perspective Camera
+    orthoCamera = new THREE.OrthographicCamera(
+        -size * aspect, size * aspect,
+        size, -size,
+        1, 1000
+    );
     perspectiveCamera = new THREE.PerspectiveCamera(70, aspect, 1, 1000);
+
+    setFrontView(); // Default to front view
+}
+
+function setFrontView() {
+    orthoCamera.left = -size * aspect;
+    orthoCamera.right = size * aspect;
+    orthoCamera.top = size;
+    orthoCamera.bottom = -size;
+    orthoCamera.updateProjectionMatrix();
+
+    orthoCamera.position.set(0, 0, 100);
+    orthoCamera.lookAt(scene.position);
+
+    camera = orthoCamera;
+}
+
+function setSideView() {
+    orthoCamera.left = -size * aspect;
+    orthoCamera.right = size * aspect;
+    orthoCamera.top = size;
+    orthoCamera.bottom = -size;
+    orthoCamera.updateProjectionMatrix();
+
+    orthoCamera.position.set(100, 0, 0);
+    orthoCamera.lookAt(scene.position);
+
+    camera = orthoCamera;
+}
+
+function setTopView() {
+    orthoCamera.left = -size * aspect;
+    orthoCamera.right = size * aspect;
+    orthoCamera.top = size;
+    orthoCamera.bottom = -size;
+    orthoCamera.updateProjectionMatrix();
+
+    orthoCamera.position.set(0, 100, 0);
+    orthoCamera.lookAt(scene.position);
+
+    camera = orthoCamera;
+}
+
+function setPerspectiveView() {
     perspectiveCamera.position.set(50, 50, 80);
     perspectiveCamera.lookAt(scene.position);
 
-    // Set default camera (perspective)
     camera = perspectiveCamera;
 }
 
@@ -722,16 +755,16 @@ function onResize() {
 function onKeyDown(e) {
     switch(e.key) {
         case '1':
-            camera = frontCamera;
+            setFrontView();
             break;
         case '2':
-            camera = sideCamera;
+            setSideView();
             break;
         case '3':
-            camera = topCamera;
+            setTopView();
             break;
         case '4':
-            camera = perspectiveCamera;
+            setPerspectiveView();
             break;
         case '7':
             robot.traverse((child) => {
