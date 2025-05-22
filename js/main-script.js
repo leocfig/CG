@@ -667,28 +667,24 @@ function updatePivotRotation(pivot) {
 
 function updateArms() {
     const step = robot.arms.step;
+    const leftDelta = new THREE.Vector3(0, 0, 0);
+    const rightDelta = new THREE.Vector3(0, 0, 0);
     if (robot.arms.placeArmsIn) {
-        if (leftArm.position.z > robot.arms.left.minZ)
-            leftArm.position.z -= step; // MUDAR
-        else if (leftArm.position.x < robot.arms.left.maxX)
-            leftArm.position.x += step;
+        if (leftArm.position.z > robot.arms.left.minZ)          leftDelta.z -= step; 
+        else if (leftArm.position.x < robot.arms.left.maxX)     leftDelta.x += step;
 
-        if (rightArm.position.z > robot.arms.right.minZ)
-            rightArm.position.z -= step;
-        else if (rightArm.position.x > robot.arms.right.minX)
-            rightArm.position.x -= step;
+        if (rightArm.position.z > robot.arms.right.minZ)        rightDelta.z -= step;
+        else if (rightArm.position.x > robot.arms.right.minX)   rightDelta.x -= step;
     }
     if (robot.arms.placeArmsOut) {
-        if (leftArm.position.x > robot.arms.left.minX)
-            leftArm.position.x -= step;
-        else if (leftArm.position.z < robot.arms.left.maxZ)
-            leftArm.position.z += step;
+        if (leftArm.position.x > robot.arms.left.minX)          leftDelta.x -= step;
+        else if (leftArm.position.z < robot.arms.left.maxZ)     leftDelta.z += step;
 
-        if (rightArm.position.x < robot.arms.right.maxX)
-            rightArm.position.x += step;
-        else if (rightArm.position.z < robot.arms.right.maxZ)
-            rightArm.position.z += step;
+        if (rightArm.position.x < robot.arms.right.maxX)        rightDelta.x += step;
+        else if (rightArm.position.z < robot.arms.right.maxZ)   rightDelta.z += step;
     }
+    leftArm.position.add(leftDelta);
+    rightArm.position.add(rightDelta);
 }
 
 function updateTrailer(){
@@ -699,8 +695,7 @@ function updateTrailer(){
     if (trailer.movementVector['ArrowLeft'])    movement.x -= TRAILER_SPEED;
     if (trailer.movementVector['ArrowRight'])   movement.x += TRAILER_SPEED;
 
-    trailer.position.x += movement.x;
-    trailer.position.z += movement.z;
+    trailer.position.add(movement);
 }
 
 /////////////
