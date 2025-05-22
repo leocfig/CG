@@ -104,20 +104,11 @@ const WAIST_WHEEL_OFFSET_X = WAIST_WIDTH / 2 + WHEEL_HEIGHT / 2;
 
 const ROBOT_HEIGHT = HEAD_SIZE + TORSO_HEIGHT + ABDOMEN_HEIGHT + WAIST_HEIGHT + THIGH_HEIGHT + CALF_HEIGHT;
 
-const robotMaterials = {
-    torso:    new THREE.MeshBasicMaterial({ color: 0x8b0000, wireframe: false }), // dark red
-    abdomen:  new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false }), // dark navy blue
-    waist:    new THREE.MeshBasicMaterial({ color: 0xC0C0C0, wireframe: false }), // silver
-    head:     new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false }), // dark navy blue
-    eyes:     new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: false }), // black
-    antennas: new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false }), // dark navy blue
-    arm:      new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false }), // dark navy blue
-    forearm:  new THREE.MeshBasicMaterial({ color: 0x8b0000, wireframe: false }), // dark navy blue
-    pipe:     new THREE.MeshBasicMaterial({ color: 0xC0C0C0, wireframe: false }), // silver
-    thighs:   new THREE.MeshBasicMaterial({ color: 0xC0C0C0, wireframe: false }), // silver
-    calves:   new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false }), // dark navy blue
-    feet:     new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false }), // dark navy blue
-    wheels:   new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: false }), // black
+const materials = {
+    darkBlue: new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false }), // dark navy blue
+    darkRed:  new THREE.MeshBasicMaterial({ color: 0x8b0000, wireframe: false }), // dark red
+    silver:   new THREE.MeshBasicMaterial({ color: 0xC0C0C0, wireframe: false }), // silver
+    black:    new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: false }), // black
 };
 
 // ── Trailer ──────────────────────────────────────────────────────────────────
@@ -173,14 +164,6 @@ const COUPLER_BASE_HEIGHT = 1;
 
 const COUPLER_TOP_RADIUS = 3;
 const COUPLER_TOP_HEIGHT = COUPLER_BASE_HEIGHT;
-
-const trailerMaterials = {
-    body:     new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false }), // dark navy blue
-    base:     new THREE.MeshBasicMaterial({ color: 0xC0C0C0, wireframe: false }), // silver
-    wheels:   new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: false }), // black
-    hitch:    new THREE.MeshBasicMaterial({ color: 0xC0C0C0, wireframe: false }), // silver
-    coupler:  new THREE.MeshBasicMaterial({ color: 0xC0C0C0, wireframe: false })  // silver
-};
 
 //////////////////////
 /* GLOBAL VARIABLES */
@@ -297,8 +280,8 @@ function addWaist(obj, x, y, z, material) {
     waistGroup.position.set(x, y, z);
     waistGroup.add(waistMesh);
 
-    addWheel(waistGroup, WAIST_WHEEL_OFFSET_X, 0, 0, robotMaterials.wheels.clone());
-    addWheel(waistGroup, - WAIST_WHEEL_OFFSET_X, 0, 0, robotMaterials.wheels.clone());
+    addWheel(waistGroup, WAIST_WHEEL_OFFSET_X, 0, 0, materials.black);
+    addWheel(waistGroup, - WAIST_WHEEL_OFFSET_X, 0, 0, materials.black);
     addLegs(waistGroup, THIGH_OFFSET_X, THIGH_OFFSET_Y, 0, material);
     obj.add(waistGroup);
 }
@@ -314,8 +297,8 @@ function addHead(obj, x, y, z, material) {
     headGroup.position.set(x, HEAD_SIZE / 2, HEAD_SIZE / 2);
     headGroup.add(headMesh);
 
-    addEyes(headGroup, EYE_OFFSET_X, EYE_OFFSET_Y, EYE_OFFSET_Z, robotMaterials.eyes.clone());
-    addAntennas(headGroup, ANTENNA_OFFSET_X, ANTENNA_OFFSET_Y, ANTENNA_OFFSET_Z, robotMaterials.antennas)
+    addEyes(headGroup, EYE_OFFSET_X, EYE_OFFSET_Y, EYE_OFFSET_Z, materials.black);
+    addAntennas(headGroup, ANTENNA_OFFSET_X, ANTENNA_OFFSET_Y, ANTENNA_OFFSET_Z, materials.darkBlue)
 
     headPivot.add(headGroup); // Add the whole head to the pivot
     obj.add(headPivot);
@@ -338,11 +321,11 @@ function addEyes(obj, x, y, z, material) {
     // Rotate so the cylinder faces forward instead of pointing up
     geometry.rotateX(Math.PI / 2);
 
-    const leftEye = new THREE.Mesh(geometry, material.clone());
+    const leftEye = new THREE.Mesh(geometry, material);
     leftEye.position.set(x, y, z);
     obj.add(leftEye);
 
-    const rightEye = new THREE.Mesh(geometry, material.clone());
+    const rightEye = new THREE.Mesh(geometry, material);
     rightEye.position.set(-x, y, z);
     obj.add(rightEye);
 }
@@ -350,18 +333,18 @@ function addEyes(obj, x, y, z, material) {
 function addAntennas(obj, x, y, z, material) {
     const geometry = new THREE.CylinderGeometry(ANTENNA_RADIUS, ANTENNA_RADIUS, ANTENNA_HEIGHT);
 
-    const leftAntenna = new THREE.Mesh(geometry, material.clone());
+    const leftAntenna = new THREE.Mesh(geometry, material);
     leftAntenna.position.set(x, y, z);
     obj.add(leftAntenna);
 
-    const rightAntenna = new THREE.Mesh(geometry, material.clone());
+    const rightAntenna = new THREE.Mesh(geometry, material);
     rightAntenna.position.set(-x, y, z);
     obj.add(rightAntenna);
 }
 
 function addPipe(obj, x, y, z, material) {
     const geometry = new THREE.CylinderGeometry(PIPE_RADIUS, PIPE_RADIUS, PIPE_HEIGHT);  2212323
-    const pipe = new THREE.Mesh(geometry, material.clone());
+    const pipe = new THREE.Mesh(geometry, material);
     pipe.position.set(x, y, z);
 
     obj.add(pipe);
@@ -369,7 +352,7 @@ function addPipe(obj, x, y, z, material) {
 
 function addForearm(obj, x, y, z, material) {
     const geometry = new THREE.BoxGeometry(ARM_WIDTH, ARM_WIDTH, FOREARM_LENGTH); 
-    const forearm = new THREE.Mesh(geometry, material.clone());
+    const forearm = new THREE.Mesh(geometry, material);
     forearm.position.set(x, y, z);
 
     obj.add(forearm);
@@ -378,20 +361,20 @@ function addForearm(obj, x, y, z, material) {
 function addArms(obj, x, y, z, material) {
     const geometry = new THREE.BoxGeometry(ARM_WIDTH, ARM_LENGTH, ARM_WIDTH);
     // Right arm
-    rightArm = new THREE.Mesh(geometry, material.clone());
+    rightArm = new THREE.Mesh(geometry, material);
     rightArm.position.set(x, y, z);
 
-    addPipe(rightArm, PIPE_OFFSET_X, PIPE_OFFSET_Y, PIPE_OFFSET_Z, robotMaterials.pipe);
-    addForearm(rightArm, 0 , - ARM_LENGTH / 2 - ARM_WIDTH / 2, FOREARM_LENGTH / 2 - ARM_WIDTH / 2, robotMaterials.forearm);
+    addPipe(rightArm, PIPE_OFFSET_X, PIPE_OFFSET_Y, PIPE_OFFSET_Z, materials.silver);
+    addForearm(rightArm, 0 , - ARM_LENGTH / 2 - ARM_WIDTH / 2, FOREARM_LENGTH / 2 - ARM_WIDTH / 2, materials.darkBlue);
 
     obj.add(rightArm);
 
     // Left arm
-    leftArm = new THREE.Mesh(geometry, material.clone());
+    leftArm = new THREE.Mesh(geometry, material);
     leftArm.position.set(-x, y, z);
 
-    addPipe(leftArm, - PIPE_OFFSET_X, PIPE_OFFSET_Y, PIPE_OFFSET_Z, robotMaterials.pipe);
-    addForearm(leftArm, 0 , - ARM_LENGTH / 2 - ARM_WIDTH / 2, FOREARM_LENGTH / 2 - ARM_WIDTH / 2, robotMaterials.forearm);
+    addPipe(leftArm, - PIPE_OFFSET_X, PIPE_OFFSET_Y, PIPE_OFFSET_Z, materials.silver);
+    addForearm(leftArm, 0 , - ARM_LENGTH / 2 - ARM_WIDTH / 2, FOREARM_LENGTH / 2 - ARM_WIDTH / 2, materials.darkBlue);
 
     obj.add(leftArm);
 
@@ -428,18 +411,18 @@ function addLeg(obj, side, x, y, z, material) {
     const legGroup = new THREE.Group();
     const thigh = new THREE.Mesh(
         new THREE.BoxGeometry(THIGH_WIDTH, THIGH_HEIGHT, THIGH_WIDTH),
-        robotMaterials.thighs.clone()
+        materials.silver
     );
     thigh.position.set(x*xSign, y, z);
 
     const calf = new THREE.Mesh(
         new THREE.BoxGeometry(CALF_WIDTH, CALF_HEIGHT, CALF_WIDTH),
-        robotMaterials.calves.clone()
+        materials.darkBlue
     );
     calf.position.y = CALF_OFFSET_Y;
 
-    addWheel(calf, LEG_WHEELS_OFFSET_X*xSign, LEG_WHEELS_OFFSET_Y - LEG_WHEELS_SPACING, 0, robotMaterials.wheels.clone());
-    addWheel(calf, LEG_WHEELS_OFFSET_X*xSign, LEG_WHEELS_OFFSET_Y + LEG_WHEELS_SPACING, 0, robotMaterials.wheels.clone());
+    addWheel(calf, LEG_WHEELS_OFFSET_X*xSign, LEG_WHEELS_OFFSET_Y - LEG_WHEELS_SPACING, 0, materials.black);
+    addWheel(calf, LEG_WHEELS_OFFSET_X*xSign, LEG_WHEELS_OFFSET_Y + LEG_WHEELS_SPACING, 0, materials.black);
     thigh.add(calf);
 
     // Foot pivot
@@ -449,7 +432,7 @@ function addLeg(obj, side, x, y, z, material) {
 
     const foot = new THREE.Mesh(
         new THREE.BoxGeometry(FOOT_WIDTH, FOOT_HEIGHT, FOOT_DEPTH),
-        robotMaterials.feet.clone()
+        materials.darkBlue
     );
     // foot.position.set(0, 0, FOOT_OFFSET_Z); // chunky feet
     foot.position.set(0, 0, - FOOT_HEIGHT / 2 + FOOT_DEPTH / 2); // regular feet
@@ -504,11 +487,11 @@ function addLegs(obj, x, y, z, material) {
 function createRobot(x, y, z) {
     robot = new THREE.Object3D();
 
-    addTorso(robot,TORSO_OFFSET_X, TORSO_OFFSET_Y, TORSO_OFFSET_Z, robotMaterials.torso);
-    addAbdomen(robot, ABDOMEN_OFFSET_X, ABDOMEN_OFFSET_Y, ABDOMEN_OFFSET_Z,  robotMaterials.abdomen);
-    addWaist(robot, WAIST_OFFSET_X, WAIST_OFFSET_Y, WAIST_OFFSET_Z,  robotMaterials.waist);
-    addHead(torso, HEAD_OFFSET_X, HEAD_OFFSET_Y, HEAD_OFFSET_Z,  robotMaterials.head);
-    addArms(torso, ARM_OFFSET_X, ARM_OFFSET_Y, ARM_OFFSET_Z, robotMaterials.arm);
+    addTorso(robot,TORSO_OFFSET_X, TORSO_OFFSET_Y, TORSO_OFFSET_Z, materials.darkRed);
+    addAbdomen(robot, ABDOMEN_OFFSET_X, ABDOMEN_OFFSET_Y, ABDOMEN_OFFSET_Z,  materials.darkBlue);
+    addWaist(robot, WAIST_OFFSET_X, WAIST_OFFSET_Y, WAIST_OFFSET_Z,  materials.silver);
+    addHead(torso, HEAD_OFFSET_X, HEAD_OFFSET_Y, HEAD_OFFSET_Z,  materials.darkBlue);
+    addArms(torso, ARM_OFFSET_X, ARM_OFFSET_Y, ARM_OFFSET_Z, materials.darkBlue);
 
     scene.add(robot);
     robot.position.set(x, y, z);
@@ -596,7 +579,7 @@ function addTrailerWheels(obj, material) {
     ];
   
     positions.forEach(([x, y, z]) => {
-      const wheel = new THREE.Mesh(wheelGeometry, material.clone());
+      const wheel = new THREE.Mesh(wheelGeometry, material);
       wheel.position.set(x, y, z);
       obj.add(wheel);
     });
@@ -605,11 +588,11 @@ function addTrailerWheels(obj, material) {
 function createTrailer(x, y, z) {
     trailer = new THREE.Object3D();
 
-    addTrailerBody(trailer, TRAILER_OFFSET_X, TRAILER_OFFSET_Y, TRAILER_OFFSET_Z, trailerMaterials.body);
-    addTrailerBase(trailer, TRAILER_BASE_OFFSET_X, TRAILER_BASE_OFFSET_Y, TRAILER_BASE_OFFSET_Z, trailerMaterials.base);
-    addTrailerWheels(trailer, trailerMaterials.wheels);
-    addTrailerHitch(trailer, HITCH_OFFSET_X, HITCH_OFFSET_Y, HITCH_OFFSET_Z, trailerMaterials.hitch);
-    addCoupler(trailer, COUPLER_OFFSET_X, COUPLER_OFFSET_Y, COUPLER_OFFSET_Z, trailerMaterials.coupler);
+    addTrailerBody(trailer, TRAILER_OFFSET_X, TRAILER_OFFSET_Y, TRAILER_OFFSET_Z, materials.darkBlue);
+    addTrailerBase(trailer, TRAILER_BASE_OFFSET_X, TRAILER_BASE_OFFSET_Y, TRAILER_BASE_OFFSET_Z, materials.silver);
+    addTrailerWheels(trailer, materials.black);
+    addTrailerHitch(trailer, HITCH_OFFSET_X, HITCH_OFFSET_Y, HITCH_OFFSET_Z, materials.silver);
+    addCoupler(trailer, COUPLER_OFFSET_X, COUPLER_OFFSET_Y, COUPLER_OFFSET_Z, materials.silver);
 
     scene.add(trailer);
     trailer.position.set(x, y, z);
@@ -762,16 +745,9 @@ function onKeyDown(e) {
             setPerspectiveView();
             break;
         case '7':
-            robot.traverse((child) => {
-                if (child.isMesh) {
-                    child.material.wireframe = !child.material.wireframe;
-                }
-            });
-            trailer.traverse((child) => {
-                if (child.isMesh) {
-                    child.material.wireframe = !child.material.wireframe;
-                }
-            });
+            for (let key in materials) {
+                materials[key].wireframe = !materials[key].wireframe;
+            }
             break;
         case 'r':
         case 'R':
