@@ -753,7 +753,7 @@ function updateAABB(obj) {
 
 function isInTruckMode() {
 
-    // // Small tolerance value used for safe floating point comparisons
+    // Small tolerance value used for safe floating point comparisons
     const EPSILON = 0.02;
     const headOK = Math.abs(robot.headPivot.rotation.x + Math.PI) < EPSILON;
     const legOK = Math.abs(robot.legsPivot.rotation.x - Math.PI / 2) < EPSILON;
