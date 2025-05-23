@@ -164,6 +164,10 @@ const COUPLER_BASE_HEIGHT = 1;
 const COUPLER_TOP_RADIUS = 3;
 const COUPLER_TOP_HEIGHT = COUPLER_BASE_HEIGHT;
 
+const COUPLING_POINT_X = ROBOT_X;
+const COUPLING_POINT_Y = ROBOT_Y - ABDOMEN_HEIGHT - WAIST_HEIGHT / 2;
+const COUPLING_POINT_Z = TORSO_OFFSET_Z - CALF_HEIGHT - THIGH_HEIGHT;
+
 //////////////////////
 /* GLOBAL VARIABLES */
 //////////////////////
@@ -611,12 +615,11 @@ function createTrailer(x, y, z) {
 //////////////////////
 /* CHECK COLLISIONS */
 //////////////////////
-function checkCollisions() {
+function checkCollisions(delta) {
     updateAABB(robot);
     updateAABB(trailer);
-
     if (checkAABBIntersection(robot.aabb, trailer.aabb)) {
-        handleCollisions();
+        handleCollisions(delta);
     }
 }
 
@@ -631,20 +634,26 @@ function checkAABBIntersection(a, b) {
 ///////////////////////
 /* HANDLE COLLISIONS */
 ///////////////////////
-function handleCollisions() {
+function handleCollisions(delta) {
     if (!isInTruckMode()) return;
 
-    // trailer.userData.engaged = true;
+    trailer.userData.engaging = true;
 
-    // // Calcula ponto de acoplamento com base no robot
-    // const couplingPoint = new THREE.Vector3();
-    // couplingPoint.setFromMatrixPosition(robot.matrixWorld);
-    // couplingPoint.x += 50; // ou o valor exato para o ponto de encaixe
-    // couplingPoint.y = trailer.position.y;
-    // couplingPoint.z = trailer.position.z;
+    const couplingPoint = new THREE.Vector3(COUPLING_POINT_X, COUPLING_POINT_Y, COUPLING_POINT_Z);
 
-    // Move o trailer suavemente para o ponto de acoplamento
-    trailer.position.lerp(couplingPoint, 0.2);
+    const direction = new THREE.Vector3().subVectors(couplingPoint, trailer.position);
+    const distance = direction.length();
+
+    if (distance > 0.001) {
+        direction.normalize();
+        const move = Math.min(distance, TRAILER_SPEED * delta); // evita overshoot
+        trailer.position.add(direction.multiplyScalar(move));
+    }
+    else {
+        trailer.position.add(direction);
+        trailer.userData.engaged = true;
+    }
+
 }
 
 ////////////
@@ -654,13 +663,18 @@ function handleCollisions() {
 function update() {
     const delta = clock.getDelta();
 
-    updatePivotRotation(robot.headPivot, delta);
-    updatePivotRotation(robot.legsPivot, delta);
-    updatePivotRotation(robot.leftFootPivot, delta);
-    updatePivotRotation(robot.rightFootPivot, delta);
-    updateArms(delta);
-    updateTrailer(delta);
-    checkCollisions();
+    if (!trailer.userData.engaged && trailer.userData.engaging) {
+        handleCollisions(delta); // collison already detected 
+    }
+    else if (!trailer.userData.engaged){ // only allow movement when trailer not engaged/engaging
+        updatePivotRotation(robot.headPivot, delta);
+        updatePivotRotation(robot.legsPivot, delta);
+        updatePivotRotation(robot.leftFootPivot, delta);
+        updatePivotRotation(robot.rightFootPivot, delta);
+        updateArms(delta);
+        updateTrailer(delta);
+        checkCollisions(delta); 
+    }
 }
 
 function updatePivotRotation(pivot, delta) {
@@ -729,10 +743,6 @@ function updateAABB(obj) {
     const box = new THREE.Box3().setFromObject(obj);
     obj.aabb.min.copy(box.min);
     obj.aabb.max.copy(box.max);
-}
-
-function approxEqual(a, b, epsilon = 0.01) {
-    return Math.abs(a - b) < epsilon;
 }
 
 function isInTruckMode() {
