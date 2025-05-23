@@ -16,7 +16,7 @@ const ROBOT_Y = 20;
 const ROBOT_Z = 40;
 
 // Torso
-const TORSO_WIDTH = 30;
+const TORSO_WIDTH = 29;
 const TORSO_HEIGHT = 16;
 const TORSO_DEPTH = 15;
 const TORSO_OFFSET_X = 0;
@@ -115,7 +115,7 @@ const materials = {
 // ── Trailer ──────────────────────────────────────────────────────────────────
 
 // Trailer Body (container)
-const TRAILER_WIDTH  = 30;
+const TRAILER_WIDTH  = TORSO_WIDTH;
 const TRAILER_HEIGHT = 30;
 const TRAILER_LENGTH = 60;
 const TRAILER_OFFSET_X = 0;
