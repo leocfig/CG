@@ -13,7 +13,7 @@ import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 // Robot starting position
 const ROBOT_X = -20;
 const ROBOT_Y = 20;
-const ROBOT_Z = 30;
+const ROBOT_Z = 40;
 
 // Torso
 const TORSO_WIDTH = 30;
@@ -93,19 +93,21 @@ const FOOT_DEPTH = 12;
 const FOOT_OFFSET_Y = - CALF_HEIGHT / 2 - FOOT_HEIGHT / 2;
 
 // Wheels (offset relative to calf)
-const WHEEL_RADIUS = HEAD_SIZE / 2;
+const WHEEL_RADIUS = HEAD_SIZE / 1.7;
 const WHEEL_HEIGHT = 5;
 const LEG_WHEELS_OFFSET_X = CALF_WIDTH / 2 + WHEEL_HEIGHT / 2;
 const LEG_WHEELS_OFFSET_Y = - FOOT_HEIGHT / 2;
 const LEG_WHEELS_SPACING = WHEEL_RADIUS *1.2;
 const WAIST_WHEEL_OFFSET_X = WAIST_WIDTH / 2 + WHEEL_HEIGHT / 2;
 
-const ROBOT_HEIGHT = HEAD_SIZE + TORSO_HEIGHT + ABDOMEN_HEIGHT + WAIST_HEIGHT + THIGH_HEIGHT + CALF_HEIGHT;
 const ROTATION_SPEED = 2;
 
 const materials = {
-    darkBlue: new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false }), // dark navy blue
+    blue:     new THREE.MeshBasicMaterial({ color: 0x26428B, wireframe: false }), // navy blue
+    darkBlue: new THREE.MeshBasicMaterial({ color: 0x1e346b, wireframe: false }), // dark navy blue 
     darkRed:  new THREE.MeshBasicMaterial({ color: 0x8b0000, wireframe: false }), // dark red
+    gray:     new THREE.MeshBasicMaterial({ color: 0x9e9e9e, wireframe: false }), // gray
+    darkGray: new THREE.MeshBasicMaterial({ color: 0x7a7a7a, wireframe: false }), // dark gray
     silver:   new THREE.MeshBasicMaterial({ color: 0xC0C0C0, wireframe: false }), // silver
     black:    new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: false }), // black
 };
@@ -115,18 +117,18 @@ const materials = {
 // Trailer Body (container)
 const TRAILER_WIDTH  = 30;
 const TRAILER_HEIGHT = 30;
-const TRAILER_LENGTH = 50;
+const TRAILER_LENGTH = 60;
 const TRAILER_OFFSET_X = 0;
 const TRAILER_OFFSET_Y = 0;
 const TRAILER_OFFSET_Z = 0;
 
 // Trailer Base
 const TRAILER_BASE_WIDTH  = TRAILER_WIDTH;
-const TRAILER_BASE_HEIGHT = WHEEL_RADIUS;
-const TRAILER_BASE_LENGTH = TRAILER_LENGTH;
+const TRAILER_BASE_HEIGHT = WHEEL_RADIUS * 1.1;
+const TRAILER_BASE_LENGTH = TRAILER_LENGTH * 0.75;
 const TRAILER_BASE_OFFSET_X = TRAILER_OFFSET_X;
-const TRAILER_BASE_OFFSET_Y = TRAILER_OFFSET_Y -TRAILER_HEIGHT / 2 - TRAILER_BASE_HEIGHT / 2;
-const TRAILER_BASE_OFFSET_Z = TRAILER_OFFSET_Z;
+const TRAILER_BASE_OFFSET_Y = TRAILER_OFFSET_Y - TRAILER_HEIGHT / 2 - TRAILER_BASE_HEIGHT / 2;
+const TRAILER_BASE_OFFSET_Z = - TRAILER_LENGTH / 2 + TRAILER_BASE_LENGTH / 2;;
 
 // Wheels (relative to trailer center)
 const TRAILER_WHEEL_INSET_RATIO = 0.15; // 15% of the trailer length
@@ -139,34 +141,35 @@ const TRAILER_WHEEL_OFFSET_Z = TRAILER_LENGTH / 2 - TRAILER_WHEEL_INSET_Z;
 
 // Trailer starting position
 const TRAILER_X = ROBOT_X + TORSO_WIDTH * 1.7;
-const TRAILER_Y = ROBOT_Y + WAIST_OFFSET_Y + TRAILER_HEIGHT / 2;
+const TRAILER_Y = ROBOT_Y + WAIST_OFFSET_Y + TRAILER_HEIGHT / 2 + TRAILER_BASE_HEIGHT;
 const TRAILER_Z = ROBOT_Z - (TORSO_DEPTH + TRAILER_LENGTH) * 0.8;
 const TRAILER_SPEED = 15;
 
 // Hitch piece (relative to trailer center)
 const HITCH_WIDTH  = CALF_SPACING;
-const HITCH_HEIGHT = TRAILER_BASE_HEIGHT;
-const HITCH_LENGTH = 7;
+const HITCH_HEIGHT = TRAILER_BASE_HEIGHT / 2;
+const HITCH_LENGTH = CALF_HEIGHT;
 const HITCH_OFFSET_X = 0;
-const HITCH_OFFSET_Y = TRAILER_BASE_OFFSET_Y;
-const HITCH_OFFSET_Z = TRAILER_LENGTH / 2 + HITCH_LENGTH / 2;
+const HITCH_OFFSET_Y = TRAILER_WHEEL_OFFSET_Y + HITCH_HEIGHT / 2;
+const HITCH_OFFSET_Z = TRAILER_BASE_OFFSET_Z + TRAILER_BASE_LENGTH / 2 + HITCH_LENGTH / 2;
 
 // Coupler
 const COUPLER_RADIUS = CALF_SPACING / 2;
-const COUPLER_HEIGHT = 12;
+const COUPLER_HEIGHT = CALF_WIDTH;
 const COUPLER_OFFSET_X = HITCH_OFFSET_X;
-const COUPLER_OFFSET_Y = HITCH_OFFSET_Y;
-const COUPLER_OFFSET_Z = HITCH_OFFSET_Z + HITCH_LENGTH / 2;
+const COUPLER_OFFSET_Y = TRAILER_WHEEL_OFFSET_Y;
+const COUPLER_OFFSET_Z = HITCH_OFFSET_Z + HITCH_LENGTH / 2 + HITCH_WIDTH / 2;
 
 const COUPLER_BASE_RADIUS = 4;
 const COUPLER_BASE_HEIGHT = 1;
+const COUPLER_BASE_OFFSET_Y = - COUPLER_HEIGHT / 2 - COUPLER_BASE_HEIGHT / 2;
 
 const COUPLER_TOP_RADIUS = 3;
 const COUPLER_TOP_HEIGHT = COUPLER_BASE_HEIGHT;
 
 const COUPLING_POINT_X = ROBOT_X;
-const COUPLING_POINT_Y = ROBOT_Y - ABDOMEN_HEIGHT - WAIST_HEIGHT / 2;
-const COUPLING_POINT_Z = TORSO_OFFSET_Z - CALF_HEIGHT - THIGH_HEIGHT;
+const COUPLING_POINT_Y = TRAILER_Y;
+const COUPLING_POINT_Z = ROBOT_Z -TORSO_DEPTH / 2 - ARM_WIDTH - CALF_HEIGHT - TRAILER_LENGTH / 2;
 
 //////////////////////
 /* GLOBAL VARIABLES */
@@ -174,7 +177,7 @@ const COUPLING_POINT_Z = TORSO_OFFSET_Z - CALF_HEIGHT - THIGH_HEIGHT;
 
 let camera, orthoCamera, perspectiveCamera;
 const aspect = window.innerWidth / window.innerHeight;
-const size = 50;
+const size = 60;
 let scene, renderer;
 let headGroup, waistGroup, torso, rightArm, leftArm;
 let robot, trailer;
@@ -185,7 +188,7 @@ const clock = new THREE.Clock();
 /////////////////////
 function createScene() {
     scene = new THREE.Scene();
-    scene.background = new THREE.Color('#e8fcff');
+    scene.background = new THREE.Color('#e8fcff'); // Light blue
     createRobot(ROBOT_X, ROBOT_Y, ROBOT_Z);
     createTrailer(TRAILER_X, TRAILER_Y, TRAILER_Z);
 }
@@ -276,23 +279,23 @@ function addAbdomen(obj, x, y, z, material) {
     obj.add(abdomenMesh);
 }
 
-function addWaist(obj, x, y, z, material) {
+function addWaist(obj, x, y, z, waistMaterial, wheelMaterial) {
     waistGroup = new THREE.Group();
 
     const geometry = new THREE.BoxGeometry(WAIST_WIDTH, WAIST_HEIGHT, WAIST_DEPTH);
-    const waistMesh = new THREE.Mesh(geometry, material);
+    const waistMesh = new THREE.Mesh(geometry, waistMaterial);
     waistGroup.position.set(x, y, z);
     waistGroup.add(waistMesh);
 
-    addWheel(waistGroup, WAIST_WHEEL_OFFSET_X, 0, 0, materials.black);
-    addWheel(waistGroup, - WAIST_WHEEL_OFFSET_X, 0, 0, materials.black);
-    addLegs(waistGroup, THIGH_OFFSET_X, THIGH_OFFSET_Y, 0, material);
+    addWheel(waistGroup, WAIST_WHEEL_OFFSET_X, 0, 0, wheelMaterial);
+    addWheel(waistGroup, - WAIST_WHEEL_OFFSET_X, 0, 0, wheelMaterial);
+    addLegs(waistGroup, THIGH_OFFSET_X, THIGH_OFFSET_Y, 0, waistMaterial);
     obj.add(waistGroup);
 }
 
 function addHead(obj, x, y, z, material) {
     const headPivot = new THREE.Object3D(); // Pivot for rotation
-    headPivot.position.set(x, TORSO_HEIGHT / 2, - TORSO_DEPTH / 2); // TODO: como organizamos os offsets com isto do pivot?
+    headPivot.position.set(x, TORSO_HEIGHT / 2, - TORSO_DEPTH / 2);
 
     headGroup = new THREE.Group();
 
@@ -302,7 +305,7 @@ function addHead(obj, x, y, z, material) {
     headGroup.add(headMesh);
 
     addEyes(headGroup, EYE_OFFSET_X, EYE_OFFSET_Y, EYE_OFFSET_Z, materials.black);
-    addAntennas(headGroup, ANTENNA_OFFSET_X, ANTENNA_OFFSET_Y, ANTENNA_OFFSET_Z, materials.darkBlue)
+    addAntennas(headGroup, ANTENNA_OFFSET_X, ANTENNA_OFFSET_Y, ANTENNA_OFFSET_Z, materials.silver)
 
     headPivot.add(headGroup); // Add the whole head to the pivot
     obj.add(headPivot);
@@ -421,7 +424,7 @@ function addLeg(obj, side, x, y, z, material) {
 
     const calf = new THREE.Mesh(
         new THREE.BoxGeometry(CALF_WIDTH, CALF_HEIGHT, CALF_WIDTH),
-        materials.darkBlue
+        materials.blue
     );
     calf.position.y = CALF_OFFSET_Y;
 
@@ -490,10 +493,10 @@ function createRobot(x, y, z) {
     robot = new THREE.Object3D();
 
     addTorso(robot,TORSO_OFFSET_X, TORSO_OFFSET_Y, TORSO_OFFSET_Z, materials.darkRed);
-    addAbdomen(robot, ABDOMEN_OFFSET_X, ABDOMEN_OFFSET_Y, ABDOMEN_OFFSET_Z,  materials.darkBlue);
-    addWaist(robot, WAIST_OFFSET_X, WAIST_OFFSET_Y, WAIST_OFFSET_Z,  materials.silver);
-    addHead(torso, HEAD_OFFSET_X, HEAD_OFFSET_Y, HEAD_OFFSET_Z,  materials.darkBlue);
-    addArms(torso, ARM_OFFSET_X, ARM_OFFSET_Y, ARM_OFFSET_Z, materials.darkBlue);
+    addAbdomen(robot, ABDOMEN_OFFSET_X, ABDOMEN_OFFSET_Y, ABDOMEN_OFFSET_Z,  materials.blue);
+    addWaist(robot, WAIST_OFFSET_X, WAIST_OFFSET_Y, WAIST_OFFSET_Z,  materials.darkRed);
+    addHead(torso, HEAD_OFFSET_X, HEAD_OFFSET_Y, HEAD_OFFSET_Z,  materials.blue);
+    addArms(torso, ARM_OFFSET_X, ARM_OFFSET_Y, ARM_OFFSET_Z, materials.blue);
 
     scene.add(robot);
     robot.position.set(x, y, z);
@@ -537,7 +540,7 @@ function addCoupler(obj, x, y, z, material) {
         COUPLER_RADIUS,
         COUPLER_RADIUS,
         COUPLER_HEIGHT),
-        material
+        material,
     );
     coupler.position.set(x, y, z);
     obj.add(coupler);
@@ -547,9 +550,9 @@ function addCoupler(obj, x, y, z, material) {
         COUPLER_BASE_RADIUS,
         COUPLER_BASE_RADIUS,
         COUPLER_BASE_HEIGHT),
-        material
+        materials.darkGray
     );
-    baseCoupler.position.set(x, y - COUPLER_HEIGHT / 2, z);
+    baseCoupler.position.set(x, y + COUPLER_BASE_OFFSET_Y, z);
     obj.add(baseCoupler);
 
     const topCoupler = new THREE.Mesh(
@@ -557,9 +560,9 @@ function addCoupler(obj, x, y, z, material) {
         COUPLER_TOP_RADIUS,
         COUPLER_TOP_RADIUS,
         COUPLER_TOP_HEIGHT),
-        material
+        materials.darkGray,
     );
-    topCoupler.position.set(x, y + COUPLER_HEIGHT / 2, z);
+    topCoupler.position.set(x, y - COUPLER_BASE_OFFSET_Y, z);
     obj.add(topCoupler);
 }
 
@@ -576,8 +579,8 @@ function addTrailerWheels(obj, material) {
     const positions = [
       [-TRAILER_WHEEL_OFFSET_X, TRAILER_WHEEL_OFFSET_Y, -TRAILER_WHEEL_OFFSET_Z],
       [ TRAILER_WHEEL_OFFSET_X, TRAILER_WHEEL_OFFSET_Y, -TRAILER_WHEEL_OFFSET_Z],
-      [-TRAILER_WHEEL_OFFSET_X, TRAILER_WHEEL_OFFSET_Y, -TRAILER_WHEEL_OFFSET_Z + TRAILER_LENGTH/4],
-      [ TRAILER_WHEEL_OFFSET_X, TRAILER_WHEEL_OFFSET_Y, -TRAILER_WHEEL_OFFSET_Z + TRAILER_LENGTH/4]
+      [-TRAILER_WHEEL_OFFSET_X, TRAILER_WHEEL_OFFSET_Y, -TRAILER_WHEEL_OFFSET_Z + TRAILER_LENGTH/3.5],
+      [ TRAILER_WHEEL_OFFSET_X, TRAILER_WHEEL_OFFSET_Y, -TRAILER_WHEEL_OFFSET_Z + TRAILER_LENGTH/3.5]
     ];
   
     positions.forEach(([x, y, z]) => {
@@ -590,11 +593,11 @@ function addTrailerWheels(obj, material) {
 function createTrailer(x, y, z) {
     trailer = new THREE.Object3D();
 
-    addTrailerBody(trailer, TRAILER_OFFSET_X, TRAILER_OFFSET_Y, TRAILER_OFFSET_Z, materials.darkBlue);
+    addTrailerBody(trailer, TRAILER_OFFSET_X, TRAILER_OFFSET_Y, TRAILER_OFFSET_Z, materials.darkRed);
     addTrailerBase(trailer, TRAILER_BASE_OFFSET_X, TRAILER_BASE_OFFSET_Y, TRAILER_BASE_OFFSET_Z, materials.silver);
     addTrailerWheels(trailer, materials.black);
     addTrailerHitch(trailer, HITCH_OFFSET_X, HITCH_OFFSET_Y, HITCH_OFFSET_Z, materials.silver);
-    addCoupler(trailer, COUPLER_OFFSET_X, COUPLER_OFFSET_Y, COUPLER_OFFSET_Z, materials.silver);
+    addCoupler(trailer, COUPLER_OFFSET_X, COUPLER_OFFSET_Y, COUPLER_OFFSET_Z, materials.gray);
 
     scene.add(trailer);
     trailer.position.set(x, y, z);
@@ -618,7 +621,8 @@ function createTrailer(x, y, z) {
 function checkCollisions(delta) {
     updateAABB(robot);
     updateAABB(trailer);
-    if (checkAABBIntersection(robot.aabb, trailer.aabb)) {
+    if (isInTruckMode() && checkAABBIntersection(robot.aabb, trailer.aabb)) {
+        trailer.userData.engaging = true;
         handleCollisions(delta);
     }
 }
@@ -635,10 +639,6 @@ function checkAABBIntersection(a, b) {
 /* HANDLE COLLISIONS */
 ///////////////////////
 function handleCollisions(delta) {
-    if (!isInTruckMode()) return;
-
-    trailer.userData.engaging = true;
-
     const couplingPoint = new THREE.Vector3(COUPLING_POINT_X, COUPLING_POINT_Y, COUPLING_POINT_Z);
 
     const direction = new THREE.Vector3().subVectors(couplingPoint, trailer.position);
@@ -646,12 +646,13 @@ function handleCollisions(delta) {
 
     if (distance > 0.001) {
         direction.normalize();
-        const move = Math.min(distance, TRAILER_SPEED * delta); // evita overshoot
+        const move = Math.min(distance, TRAILER_SPEED * delta); // Avoids overshoot
         trailer.position.add(direction.multiplyScalar(move));
     }
     else {
         trailer.position.add(direction);
         trailer.userData.engaged = true;
+        trailer.userData.engaging = false;
     }
 
 }
@@ -772,7 +773,7 @@ function render() {
     renderer.render(scene, camera);
 }
 
-//////////////head//////////////////
+////////////////////////////////
 /* INITIALIZE ANIMATION CYCLE */
 ////////////////////////////////
 function init() {
