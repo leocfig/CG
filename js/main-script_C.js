@@ -13,18 +13,22 @@ import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 ///////////////
 
 // Canvas
-const CANVAS_WIDTH = 256;
-const CANVAS_HEIGHT = 256;
-
-// Floral Field Texture
-const CIRCLES_NUMBER = 500;
-const MAX_CIRCLE_RADIUS = 3;
-const MIN_CIRCLE_RADIUS = 1;
+const CANVAS_WIDTH = 2048;
+const CANVAS_HEIGHT = 2048;
 
 // Sky Texture
-const STARS_NUMBER = 800; 
-const MAX_STAR_RADIUS = 0.8;
-const MIN_STAR_RADIUS = 0.3;
+const STARS_NUMBER = 1500; 
+const MAX_STAR_RADIUS = 1.5;
+const MIN_STAR_RADIUS = 0.8;
+const SKYDOME_RADIUS = 125;
+const SEGMENTS = 128;
+
+// Floral Field Texture
+const CIRCLES_NUMBER = 1500;
+const MAX_CIRCLE_RADIUS = 6;
+const MIN_CIRCLE_RADIUS = 3;
+const PLANE_WIDTH = SKYDOME_RADIUS * 2;
+const PLANE_HEIGTH = SKYDOME_RADIUS;
 
 //////////////////////
 /* GLOBAL VARIABLES */
@@ -33,7 +37,7 @@ const MIN_STAR_RADIUS = 0.3;
 let camera, orthoCamera, perspectiveCamera;
 const aspect = window.innerWidth / window.innerHeight;
 const size = 60;
-let scene, renderer, texture;
+let scene, renderer, textureFloral, textureSky, skydome;
 
 /////////////////////
 /* CREATE SCENE(S) */
@@ -116,7 +120,8 @@ function createCanvasTexture(width, height) {
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
-    texture = new THREE.CanvasTexture(canvas);
+    textureSky = new THREE.CanvasTexture(canvas);
+    textureFloral = new THREE.CanvasTexture(canvas);
 }
 
 function randInt(min, max) {
@@ -124,7 +129,7 @@ function randInt(min, max) {
 }
 
 function createFieldTexture() {
-    const canvas = texture.image;
+    const canvas = textureFloral.image;
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#CAFFC4';   // Light green
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -142,11 +147,11 @@ function createFieldTexture() {
         ctx.fill();
     }
 
-    texture.needsUpdate = true;
+    textureFloral.needsUpdate = true;
 }
 
 function createSkyTexture() {
-    const canvas = texture.image;
+    const canvas = textureSky.image;
     const ctx = canvas.getContext('2d');
 
     const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -166,7 +171,7 @@ function createSkyTexture() {
         ctx.fill();
     }
 
-    texture.needsUpdate = true;
+    textureSky.needsUpdate = true;
 }
 
 //////////////////////
@@ -208,11 +213,22 @@ function init() {
     createCamera();
     createCanvasTexture(CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // Estas 4 linhas é só código aleatório para podermos visualizar a textura, no passo 3 já vamos actually aplicar ao objeto certo
-    const geometry = new THREE.PlaneGeometry(100, 100);
-    const material = new THREE.MeshBasicMaterial({ map: texture });
-    const plane = new THREE.Mesh(geometry, material);
-    scene.add(plane);
+    //Estas 4 linhas é só código aleatório para podermos visualizar a textura, no passo 3 já vamos actually aplicar ao objeto certo
+    const geometryField = new THREE.PlaneGeometry( PLANE_WIDTH, PLANE_HEIGTH);
+    const materialField = new THREE.MeshBasicMaterial({ 
+        map: textureFloral 
+    });
+    const field = new THREE.Mesh(geometryField, materialField);
+    field.position.y = - PLANE_HEIGTH / 2;
+    scene.add(field);
+
+    const geometrySky = new THREE.SphereGeometry(SKYDOME_RADIUS, SEGMENTS, SEGMENTS);
+    const materialSky = new THREE.MeshBasicMaterial({
+        map: textureSky,
+        side: THREE.BackSide // <- isto é importante para vermos por dentro
+    });
+    skydome = new THREE.Mesh(geometrySky, materialSky);
+    scene.add(skydome);
 
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
