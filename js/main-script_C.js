@@ -28,16 +28,23 @@ const CIRCLES_NUMBER = 1500;
 const MAX_CIRCLE_RADIUS = 6;
 const MIN_CIRCLE_RADIUS = 3;
 const PLANE_WIDTH = SKYDOME_RADIUS * 2;
-const PLANE_HEIGTH = SKYDOME_RADIUS;
+const PLANE_HEIGHT = SKYDOME_RADIUS;
+
+// Terrain
+//const PLANE_WIDTH = window.innerWidth / 4;
+// const PLANE_HEIGHT = 10;
+//const PLANE_HEIGHT = window.innerHeight / 5;
 
 //////////////////////
 /* GLOBAL VARIABLES */
 //////////////////////
 
-let camera, orthoCamera, perspectiveCamera;
+const loader = new THREE.TextureLoader();
 const aspect = window.innerWidth / window.innerHeight;
 const size = 60;
 let scene, renderer, textureFloral, textureSky, skydome;
+let camera, orthoCamera, perspectiveCamera;
+
 
 /////////////////////
 /* CREATE SCENE(S) */
@@ -45,6 +52,12 @@ let scene, renderer, textureFloral, textureSky, skydome;
 function createScene() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color('#FFFFFF'); // White
+    const ambientLight = new THREE.AmbientLight(0xffffff, 2.5); // TODO: mudar luzes dps
+    scene.add(ambientLight);
+    
+    createCanvasTexture(CANVAS_WIDTH, CANVAS_HEIGHT);
+    createSkydome(textureSky);
+    createTerrain(0, - PLANE_HEIGHT / 2, 0, textureFloral);
 }
 
 //////////////////////
@@ -101,12 +114,12 @@ function setFrontView() {
 //     camera = orthoCamera;
 // }
 
-// function setPerspectiveView() {
-//     perspectiveCamera.position.set(50, 50, 80);
-//     perspectiveCamera.lookAt(scene.position);
+function setPerspectiveView() {
+    perspectiveCamera.position.set(50, 50, 80);
+    perspectiveCamera.lookAt(scene.position);
 
-//     camera = perspectiveCamera;
-// }
+    camera = perspectiveCamera;
+}
 
 /////////////////////
 /* CREATE LIGHT(S) */
@@ -174,6 +187,37 @@ function createSkyTexture() {
     textureSky.needsUpdate = true;
 }
 
+function createTerrain(x, y, z, texture) {
+    const geometry = new THREE.PlaneGeometry(PLANE_WIDTH, PLANE_HEIGHT, 64, 64);
+
+    // TODO: mudar cenas para ficar mais abstrato
+    const terrainTexture = loader.load( 'pictures/heightmap.png' );
+    texture.colorSpace = THREE.SRGBColorSpace;      // este material precisa de luz!!
+    const material = new THREE.MeshPhongMaterial({  // usar phong? antes usei standard q é mais accurate em termos de física, pior em termos de performance (mais pesado)
+        map: texture,                               //TODO: ver wrapping / filtering das aulas teóricas
+        aoMap: terrainTexture,
+        aoMapIntensity: 0.75,
+        displacementMap: terrainTexture,
+        displacementScale: 25,
+        side: THREE.DoubleSide,
+    });
+    const terrain = new THREE.Mesh(geometry, material);
+    terrain.position.set(x, y, z);
+    terrain.rotation.x = -Math.PI / 2; // rotate it to make it flat on the XZ plane
+    terrain.rotation.z = Math.PI / 4;  //TODO: ver como é q deixamos rotações/posição
+    scene.add(terrain);
+}
+
+function createSkydome(texture) {
+    const geometrySky = new THREE.SphereGeometry(SKYDOME_RADIUS, SEGMENTS, SEGMENTS);
+    const materialSky = new THREE.MeshBasicMaterial({
+        map: texture,
+        side: THREE.BackSide // <- isto é importante para vermos por dentro
+    });
+    skydome = new THREE.Mesh(geometrySky, materialSky);
+    scene.add(skydome);
+}
+
 //////////////////////
 /* CHECK COLLISIONS */
 //////////////////////
@@ -211,24 +255,6 @@ function init() {
 
     createScene();
     createCamera();
-    createCanvasTexture(CANVAS_WIDTH, CANVAS_HEIGHT);
-
-    //Estas 4 linhas é só código aleatório para podermos visualizar a textura, no passo 3 já vamos actually aplicar ao objeto certo
-    const geometryField = new THREE.PlaneGeometry( PLANE_WIDTH, PLANE_HEIGTH);
-    const materialField = new THREE.MeshBasicMaterial({ 
-        map: textureFloral 
-    });
-    const field = new THREE.Mesh(geometryField, materialField);
-    field.position.y = - PLANE_HEIGTH / 2;
-    scene.add(field);
-
-    const geometrySky = new THREE.SphereGeometry(SKYDOME_RADIUS, SEGMENTS, SEGMENTS);
-    const materialSky = new THREE.MeshBasicMaterial({
-        map: textureSky,
-        side: THREE.BackSide // <- isto é importante para vermos por dentro
-    });
-    skydome = new THREE.Mesh(geometrySky, materialSky);
-    scene.add(skydome);
 
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
@@ -239,7 +265,7 @@ function init() {
 /* ANIMATION CYCLE */
 /////////////////////
 function animate() {
-    update();
+    // update();
     render();
     requestAnimationFrame(animate);
 }
@@ -267,8 +293,12 @@ function onKeyDown(e) {
         case '2':
             createSkyTexture();
             break;
-            
-            
+        case '7':
+            setPerspectiveView();
+            break;    
+        case '8':       // tirar brevemente
+            setFrontView();
+            break;    
     }
 }
 
