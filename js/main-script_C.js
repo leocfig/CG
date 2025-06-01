@@ -36,9 +36,10 @@ const BRANCH_RADIUS = 0.5;
 const DEBARKED_HEIGHT = 4;
 const BARKED_HEIGHT = 8;
 const TREE_HEIGHT = DEBARKED_HEIGHT + BARKED_HEIGHT;
+const BRANCH_HEIGHT = TREE_HEIGHT / 1.5;
 const FOLIAGE_RADIUS = 4;
 const edgeMargin = TREE_HEIGHT * 0.5;
-const foliageY = TREE_HEIGHT * 1.2;
+const foliageY = TREE_HEIGHT * 1.1;
 
 // Moon
 const MOON_RADIUS = 10;
@@ -282,9 +283,6 @@ function createTerrain(x, y, z, texture) {
     img.onload = () => {
         heightmapWidth = img.naturalWidth;
         heightmapHeight = img.naturalHeight;
-
-        console.log('Width:', heightmapWidth);
-        console.log('Height:', heightmapHeight);
         heightData = getHeightData(img, heightmapWidth, heightmapHeight);
         scatterTrees(NUMBER_TREES);
     };
@@ -359,30 +357,35 @@ function createTree(x, y, z) {
     barked.position.y = DEBARKED_HEIGHT + BARKED_HEIGHT / 2;
     trunkGroup.add(barked);
 
-    trunkGroup.rotation.z = Math.PI / 12; // slight tilt
+    const maxTilt = Math.PI / 6;
+    trunkGroup.rotation.z = Math.random() * maxTilt; // slight tilt
     tree.add(trunkGroup);
 
     // Secondary branch
-    const branchGeometry = new THREE.CylinderGeometry(BRANCH_RADIUS, BRANCH_RADIUS,  TREE_HEIGHT / 1.7);
+    const tilt = -trunkGroup.rotation.z;
+    const branchY = (Math.cos(tilt) * BRANCH_HEIGHT + Math.cos(-tilt) * TREE_HEIGHT) / 2;
+
+    const branchGeometry = new THREE.CylinderGeometry(BRANCH_RADIUS, BRANCH_RADIUS, BRANCH_HEIGHT);
     const branch = new THREE.Mesh(branchGeometry, barkedMaterial);
-    branch.position.set(Math.sin(trunkGroup.rotation.z), TREE_HEIGHT * Math.cos(trunkGroup.rotation.z), 0);
-    branch.rotation.z = -Math.PI / 6;   // opposite tilt
+    branch.position.set(0, branchY, 0);
+    branch.rotation.z = tilt;     // opposite tilt
     tree.add(branch);
 
     // Canopy
     const foliageMaterial = new THREE.MeshStandardMaterial({ color: '#0f3d0f' }); // Dark green
 
     const foliage1 = new THREE.Mesh(new THREE.SphereGeometry(FOLIAGE_RADIUS), foliageMaterial);
+    foliage1.scale.set(1.2, 0.8, 1.0);
     foliage1.position.set(-Math.sin(trunkGroup.rotation.z) * TREE_HEIGHT, foliageY, 0);
     tree.add(foliage1);
 
     // Additional canopy ellipsoid
     const foliage2 = new THREE.Mesh(new THREE.SphereGeometry(FOLIAGE_RADIUS *0.8), foliageMaterial);
+    foliage2.scale.set(1.1, 0.7, 1.0);
     foliage2.position.set(-Math.sin(branch.rotation.z), foliageY * 0.9, 0);
     tree.add(foliage2);
 
     tree.position.set(x, y, z);
-    tree.rotation.y = Math.random() * Math.PI * 2;
     scene.add(tree);
 }
 
