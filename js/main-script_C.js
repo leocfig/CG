@@ -6,7 +6,6 @@ import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 
 // DÚVIDAS
 
-// Aqui tal como no caso das câmaras, também é boa prática termos só um objeto textura e depois esse objeto vai só tendo os seus parâmetros atualizados?
 
 ///////////////
 /* CONSTANTS */
@@ -30,6 +29,17 @@ const MIN_CIRCLE_RADIUS = 3;
 const PLANE_WIDTH = SKYDOME_RADIUS * 2;
 const PLANE_HEIGHT = SKYDOME_RADIUS * 2;
 
+// Trees
+const NUMBER_TREES = 10;
+const TRUNK_RADIUS = 1;
+const BRANCH_RADIUS = 0.5;
+const DEBARKED_HEIGHT = 4;
+const BARKED_HEIGHT = 8;
+const TREE_HEIGHT = DEBARKED_HEIGHT + BARKED_HEIGHT;
+const FOLIAGE_RADIUS = 4;
+const edgeMargin = TREE_HEIGHT * 0.5;
+const foliageY = TREE_HEIGHT * 1.2;
+
 // Moon
 const MOON_RADIUS = 15;
 const MOON_OFFSET_X = - SKYDOME_RADIUS * 0.4;
@@ -38,8 +48,11 @@ const MOON_OFFSET_Z = - SKYDOME_RADIUS / 2 ;
 
 // Terrain
 //const PLANE_WIDTH = window.innerWidth / 4;
-// const PLANE_HEIGHT = 10;
+//const PLANE_HEIGHT = 10;
 //const PLANE_HEIGHT = window.innerHeight / 5;
+//const HEIGHTMAP_WIDTH = 505;
+//const HEIGHTMAP_HEIGHT = 505;
+const MAX_TERRAIN_HEIGHT = 25;
 
 //////////////////////
 /* GLOBAL VARIABLES */
@@ -55,7 +68,8 @@ let moonMaterials = {
     toon: new THREE.MeshToonMaterial({ color: 0xFFFFFF })
 };
 let camera, orthoCamera, perspectiveCamera;
-
+let heightData, img;
+let heightmapWidth, heightmapHeight;
 
 /////////////////////
 /* CREATE SCENE(S) */
@@ -67,6 +81,7 @@ function createScene() {
     createSkydome(textureSky);
     // createTerrain(0, - PLANE_HEIGHT / 2, 0, textureFloral);
     createTerrain(0,  -SKYDOME_RADIUS / 2, 0, textureFloral);
+    //scatterTrees(NUMBER_TREES);
     createMoon();
     createLight();
 }
@@ -213,8 +228,8 @@ function createMoon() {
 }
 
 function createTerrain(x, y, z, texture) {
-    const geometry = new THREE.CircleGeometry(SKYDOME_RADIUS, SEGMENTS)
-    // const geometry = new THREE.PlaneGeometry(PLANE_WIDTH, PLANE_HEIGHT, 64, 64);
+    //const geometry = new THREE.CircleGeometry(SKYDOME_RADIUS, SEGMENTS)
+    const geometry = new THREE.PlaneGeometry(PLANE_WIDTH, PLANE_HEIGHT, 64, 64);
 
     // TODO: mudar cenas para ficar mais abstrato
     const terrainTexture = loader.load( 'pictures/heightmap.png' );
@@ -224,14 +239,27 @@ function createTerrain(x, y, z, texture) {
         aoMap: terrainTexture,
         aoMapIntensity: 0.75,
         displacementMap: terrainTexture,
-        displacementScale: 25,
+        displacementScale: MAX_TERRAIN_HEIGHT,
         side: THREE.DoubleSide,
     });
+
     const terrain = new THREE.Mesh(geometry, material);
     terrain.position.set(x, y, z);
     terrain.rotation.x = -Math.PI / 2; // rotate it to make it flat on the XZ plane
-    terrain.rotation.z = Math.PI / 4;  //TODO: ver como é q deixamos rotações/posição
+    //terrain.rotation.z = Math.PI / 4;  //TODO: ver como é q deixamos rotações/posição
     scene.add(terrain);
+    
+    img = new Image();
+    img.src = 'pictures/heightmap.png';
+    img.onload = () => {
+        heightmapWidth = img.naturalWidth;
+        heightmapHeight = img.naturalHeight;
+
+        console.log('Width:', heightmapWidth);
+        console.log('Height:', heightmapHeight);
+        heightData = getHeightData(img, heightmapWidth, heightmapHeight);
+        scatterTrees(NUMBER_TREES);
+    };
 }
 
 function createSkydome(texture) {
@@ -243,6 +271,100 @@ function createSkydome(texture) {
     skydome = new THREE.Mesh(geometrySky, materialSky);
     skydome.position.set(0, -SKYDOME_RADIUS / 2, 0);
     scene.add(skydome);
+}
+
+function getHeightData(img, width, height) {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext('2d');
+    context.drawImage(img, 0, 0, width, height);
+
+    const imageData = context.getImageData(0, 0, width, height).data;
+    const data = new Float32Array(width * height);
+
+    let i = 0;
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const index = (y * width + x) * 4;
+            const r = imageData[index];
+            const g = imageData[index + 1];
+            const b = imageData[index + 2];
+            const brightness = (r + g + b) / 3;
+            data[i++] = brightness / 255; // normalizado entre 0 e 1
+        }
+    }
+
+    return data;
+}
+
+function getHeightAt(x, z, heightData, heightmapWidth, heightmapHeight, planeSize, maxHeight) {
+    const halfSize = planeSize / 2;
+
+    const imgX = Math.floor((x + halfSize) / planeSize * heightmapWidth);
+    const imgZ = Math.floor((z + halfSize) / planeSize * heightmapHeight);
+
+    const clampedX = Math.max(0, Math.min(heightmapWidth - 1, imgX));
+    const clampedZ = Math.max(0, Math.min(heightmapHeight - 1, imgZ));
+
+    const index = clampedZ * heightmapWidth + clampedX;
+    const height = heightData[index]; // entre 0 e 1
+
+    return height * maxHeight;
+}
+
+function createTree(x, y, z) {
+    const tree = new THREE.Group();
+
+    const trunkGroup = new THREE.Group();
+
+    const debarkedGeometry = new THREE.CylinderGeometry(TRUNK_RADIUS * 0.8, TRUNK_RADIUS * 0.8, DEBARKED_HEIGHT);
+    const debarkedMaterial = new THREE.MeshStandardMaterial({ color: '#a64500' }); // Dark-orange
+    const debarked = new THREE.Mesh(debarkedGeometry, debarkedMaterial);
+    debarked.position.y = DEBARKED_HEIGHT / 2;
+    trunkGroup.add(debarked);
+
+    const barkedGeometry = new THREE.CylinderGeometry(TRUNK_RADIUS, TRUNK_RADIUS, BARKED_HEIGHT);
+    const barkedMaterial = new THREE.MeshStandardMaterial({ color: '#5e3c1a' }); // Dark brown
+    const barked = new THREE.Mesh(barkedGeometry, barkedMaterial);
+    barked.position.y = DEBARKED_HEIGHT + BARKED_HEIGHT / 2;
+    trunkGroup.add(barked);
+
+    trunkGroup.rotation.z = Math.PI / 12; // slight tilt
+    tree.add(trunkGroup);
+
+    // Secondary branch
+    const branchGeometry = new THREE.CylinderGeometry(BRANCH_RADIUS, BRANCH_RADIUS,  TREE_HEIGHT / 1.7);
+    const branch = new THREE.Mesh(branchGeometry, barkedMaterial);
+    branch.position.set(Math.sin(trunkGroup.rotation.z), TREE_HEIGHT * Math.cos(trunkGroup.rotation.z), 0);
+    branch.rotation.z = -Math.PI / 6;   // opposite tilt
+    tree.add(branch);
+
+    // Canopy
+    const foliageMaterial = new THREE.MeshStandardMaterial({ color: '#0f3d0f' }); // Dark green
+
+    const foliage1 = new THREE.Mesh(new THREE.SphereGeometry(FOLIAGE_RADIUS), foliageMaterial);
+    foliage1.position.set(-Math.sin(trunkGroup.rotation.z) * TREE_HEIGHT, foliageY, 0);
+    tree.add(foliage1);
+
+    // Additional canopy ellipsoid
+    const foliage2 = new THREE.Mesh(new THREE.SphereGeometry(FOLIAGE_RADIUS *0.8), foliageMaterial);
+    foliage2.position.set(-Math.sin(branch.rotation.z), foliageY * 0.9, 0);
+    tree.add(foliage2);
+
+    tree.position.set(x, y, z);
+    tree.rotation.y = Math.random() * Math.PI * 2;
+    scene.add(tree);
+}
+
+function scatterTrees(count) {
+    for (let i = 0; i < count; i++) {
+        const x = randInt(-PLANE_WIDTH / 2 + edgeMargin, PLANE_WIDTH / 2 - edgeMargin);
+        const z = randInt(-PLANE_HEIGHT / 2 + edgeMargin, PLANE_HEIGHT / 2 - edgeMargin);
+        const y = getHeightAt(x, z, heightData, heightmapWidth, heightmapHeight, PLANE_WIDTH, MAX_TERRAIN_HEIGHT);
+        createTree(x, y -SKYDOME_RADIUS / 2, z);
+    }
 }
 
 //////////////////////
