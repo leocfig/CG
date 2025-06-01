@@ -41,9 +41,9 @@ const edgeMargin = TREE_HEIGHT * 0.5;
 const foliageY = TREE_HEIGHT * 1.2;
 
 // Moon
-const MOON_RADIUS = 15;
+const MOON_RADIUS = 10;
 const MOON_OFFSET_X = - SKYDOME_RADIUS * 0.4;
-const MOON_OFFSET_Y = -SKYDOME_RADIUS / 2 + SKYDOME_RADIUS * 0.6 ;
+const MOON_OFFSET_Y = -SKYDOME_RADIUS / 2 + SKYDOME_RADIUS * 0.65;
 const MOON_OFFSET_Z = - SKYDOME_RADIUS / 2 ;
 
 // Terrain
@@ -54,6 +54,18 @@ const MOON_OFFSET_Z = - SKYDOME_RADIUS / 2 ;
 //const HEIGHTMAP_HEIGHT = 505;
 const MAX_TERRAIN_HEIGHT = 25;
 
+// Ovni
+const OVNI_RADIUS = 8;
+const OVNI_SCALE_Y = 0.3;
+const OVNI_HEIGHT = OVNI_SCALE_Y * OVNI_RADIUS;
+const OVNI_COCKPIT_RADIUS = OVNI_RADIUS / 2;
+const OVNI_SPOTLIGHT_HEIGHT = 3;
+const OVNI_NUM_LIGHTS = 12;
+const OVNI_LIGHTS_RADIUS = OVNI_RADIUS * 0.65;
+const OVNI_SPEED = 15;
+const OVNI_ROTATION_SPEED = 0.5;
+const MAX_OVNI_RADIUS = Math.sqrt(SKYDOME_RADIUS*SKYDOME_RADIUS - SKYDOME_RADIUS*SKYDOME_RADIUS*0.5*0.5) - OVNI_RADIUS;  // margin valid movement
+
 //////////////////////
 /* GLOBAL VARIABLES */
 //////////////////////
@@ -61,15 +73,30 @@ const MAX_TERRAIN_HEIGHT = 25;
 const loader = new THREE.TextureLoader();
 const aspect = window.innerWidth / window.innerHeight;
 const size = 70;
-let scene, renderer, textureFloral, textureSky, skydome, moon, directionalLight; 
+let scene, renderer, textureFloral, textureSky, skydome, moon, directionalLight, ovni, ovniSpotLight; 
 let moonMaterials = {
     lambert: new THREE.MeshLambertMaterial({ color: 0xFFFFFF, emissive: 0x222222 }),
     phong: new THREE.MeshPhongMaterial({ color: 0xFFFFFF, shininess: 100, emissive: 0x222222 }),
     toon: new THREE.MeshToonMaterial({ color: 0xFFFFFF })
 };
+const ovniMaterials = {
+    lambert: {
+        body: new THREE.MeshLambertMaterial({ color: 0xbf0453, emissive: 0x222222 }),
+        cockpit: new THREE.MeshLambertMaterial({ color: 0xfae1fd, emissive: 0x222222 })
+    },
+    phong: {
+        body: new THREE.MeshPhongMaterial({ color: 0xbf0453, shininess: 100, emissive: 0x222222 }),
+        cockpit: new THREE.MeshPhongMaterial({ color: 0xfae1fd, shininess: 100, emissive: 0x222222 })
+    },
+    toon: {
+        body: new THREE.MeshToonMaterial({ color: 0xbf0453 }),
+        cockpit: new THREE.MeshToonMaterial({ color: 0xfae1fd })
+    }
+};
 let camera, orthoCamera, perspectiveCamera;
 let heightData, img;
 let heightmapWidth, heightmapHeight;
+const clock = new THREE.Clock();
 
 /////////////////////
 /* CREATE SCENE(S) */
@@ -84,6 +111,7 @@ function createScene() {
     //scatterTrees(NUMBER_TREES);
     createMoon();
     createLight();
+    createOvni(0, 0, 0)
 }
 
 function createLight (){
@@ -149,7 +177,7 @@ function setTopView() {
 }
 
 function setPerspectiveView() {
-    perspectiveCamera.position.set(50, 30, 80);
+    perspectiveCamera.position.set(50, 15, 80);
     perspectiveCamera.lookAt(scene.position);
     camera = perspectiveCamera;
 }
@@ -367,6 +395,67 @@ function scatterTrees(count) {
     }
 }
 
+function createOvni(x, y, z){
+    ovni = new THREE.Group();
+    scene.add(ovni);
+    console.log(ovni.position)
+    
+    // Body 
+    const geometryOvniBody = new THREE.SphereGeometry(OVNI_RADIUS, SEGMENTS, SEGMENTS);
+    geometryOvniBody.scale(1, OVNI_SCALE_Y, 1); // achatar em Y
+    const bodyOvni = new THREE.Mesh(geometryOvniBody, ovniMaterials.lambert.body);
+    ovni.add(bodyOvni);
+
+    // Cockpit ovni
+    const geometryCockpit = new THREE.SphereGeometry(OVNI_COCKPIT_RADIUS, SEGMENTS, SEGMENTS, 0, Math.PI * 2, 0, Math.PI / 2);
+    const cockpit = new THREE.Mesh(geometryCockpit, ovniMaterials.lambert.cockpit);
+    cockpit.position.y = OVNI_HEIGHT / 2 ; 
+    cockpit.name = 'ovni-cockpit'
+    ovni.add(cockpit);
+
+    // Spotlight
+    const geometrySpotlightHolder = new THREE.CylinderGeometry(OVNI_COCKPIT_RADIUS, OVNI_COCKPIT_RADIUS, OVNI_SPOTLIGHT_HEIGHT, SEGMENTS);
+    const spotlightHolder = new THREE.Mesh(geometrySpotlightHolder, ovniMaterials.lambert.body);
+    spotlightHolder.position.y = -OVNI_HEIGHT / 2;
+    ovni.add(spotlightHolder);
+
+    // Small lights and center spotlight
+    createOvniLights(bodyOvni);
+    ovniSpotLight = new THREE.SpotLight(0xFFFFFF, 1, 30, Math.PI / 6);
+    ovniSpotLight.position.set(0, -1.5, 0);
+    ovniSpotLight.target.position.set(0, -10, 0);
+    ovni.add(ovniSpotLight);
+    ovni.add(ovniSpotLight.target);
+
+    ovni.movementVector = {
+        ArrowUp: false,
+        ArrowDown: false,
+        ArrowLeft: false,
+        ArrowRight: false,
+    };
+}
+
+function createOvniLights(bodyOvni){
+    const pointLights = [];
+    for (let i = 0; i < OVNI_NUM_LIGHTS; i++) {
+        const angle = (i / OVNI_NUM_LIGHTS) * Math.PI * 2;
+        const x = Math.cos(angle) * OVNI_LIGHTS_RADIUS;
+        const z = Math.sin(angle) * OVNI_LIGHTS_RADIUS;
+        
+        const geometry = new THREE.SphereGeometry(0.5, 16, 16);
+        const material = new THREE.MeshStandardMaterial({ color: 0xFFFFAA, emissive: 0xFFFFAA });
+        const bulb = new THREE.Mesh(geometry, material);
+        bulb.position.set(x, - OVNI_HEIGHT * 0.65, z);
+        bulb.name = 'ovni-bulb';
+        bodyOvni.add(bulb);
+
+        const light = new THREE.PointLight(0xffffff, 1, 10);
+        light.position.copy(bulb.position);
+        bodyOvni.add(light);
+        pointLights.push(light);
+    }
+}
+
 //////////////////////
 /* CHECK COLLISIONS */
 //////////////////////
@@ -382,7 +471,37 @@ function scatterTrees(count) {
 ////////////
 
 function update() {
+    const delta = clock.getDelta();
+    updateOvni(delta);
+}
 
+function updateOvni(delta){
+    ovni.rotation.y += OVNI_ROTATION_SPEED * delta; // rotation 
+    const movement = new THREE.Vector3(0, 0, 0);
+
+    if (ovni.movementVector['ArrowUp'])      movement.z -= OVNI_SPEED * delta;
+    if (ovni.movementVector['ArrowDown'])    movement.z += OVNI_SPEED * delta;
+    if (ovni.movementVector['ArrowLeft'])    movement.x -= OVNI_SPEED * delta;
+    if (ovni.movementVector['ArrowRight'])   movement.x += OVNI_SPEED * delta;
+
+    const newX = ovni.position.x + movement.x;
+    const newZ = ovni.position.z + movement.z;
+    const distanceFromCenter = Math.sqrt(newX * newX + newZ * newZ);
+
+    if (distanceFromCenter < MAX_OVNI_RADIUS)   ovni.position.add(movement);
+}
+
+function updateMaterials(currentShading) {
+    moon.material = moonMaterials[currentShading];
+
+    ovni.traverse((child) => {
+        if (child.isMesh && child.name != 'ovni-bulb') { // only change material of non light objects
+            if (child.name === 'ovni-cockpit')   child.material = ovniMaterials[currentShading].cockpit;
+            else    child.material = ovniMaterials[currentShading].body;
+        }
+    });
+
+    // Adiciona os restantes objetos 
 }
 
 /////////////
@@ -414,7 +533,7 @@ function init() {
 /* ANIMATION CYCLE */
 /////////////////////
 function animate() {
-    // update();
+    update();
     render();
     requestAnimationFrame(animate);
 }
@@ -456,21 +575,27 @@ function onKeyDown(e) {
             break;
         case 'q':
         case 'Q':
-            moon.material = moonMaterials.lambert;
+            updateMaterials("lambert");
             break;
         case 'w':
         case 'W':
-            moon.material = moonMaterials.phong;
+            updateMaterials("phong");
             break;
         case 'e':
         case 'E':
-            moon.material = moonMaterials.toon;
+            updateMaterials("toon");
             break;
         case 'd':
         case 'D':
             if (directionalLight) {
                 directionalLight.visible = !directionalLight.visible;
             }
+            break;
+        case 'ArrowUp':
+        case 'ArrowDown':
+        case 'ArrowLeft':
+        case 'ArrowRight':
+            ovni.movementVector[e.key] = true;
             break;
 
             
@@ -482,6 +607,12 @@ function onKeyDown(e) {
 ///////////////////////
 function onKeyUp(e) {
     switch(e.key) {
+        case 'ArrowUp':
+        case 'ArrowDown':
+        case 'ArrowLeft':
+        case 'ArrowRight':
+            ovni.movementVector[e.key] = false;
+            break;
     }
 }
 
