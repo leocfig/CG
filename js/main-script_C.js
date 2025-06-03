@@ -61,7 +61,7 @@ const OVNI_RADIUS = 8;
 const OVNI_SCALE_Y = 0.3;
 const OVNI_HEIGHT = OVNI_SCALE_Y * OVNI_RADIUS;
 const OVNI_COCKPIT_RADIUS = OVNI_RADIUS / 2;
-const OVNI_SPOTLIGHT_HEIGHT = 3;
+const OVNI_BASE_HEIGHT = 3;
 const OVNI_NUM_LIGHTS = 12;
 const OVNI_LIGHTS_RADIUS = OVNI_RADIUS * 0.65;
 const OVNI_SPEED = 15;
@@ -75,7 +75,7 @@ const MAX_OVNI_RADIUS = Math.sqrt(SKYDOME_RADIUS*SKYDOME_RADIUS - SKYDOME_RADIUS
 const loader = new THREE.TextureLoader();
 const aspect = window.innerWidth / window.innerHeight;
 const size = 70;
-let scene, renderer, textureFloral, textureSky, skydome, moon, directionalLight, ovni, ovniSpotLight; 
+let scene, renderer, textureFloral, textureSky, skydome, moon, directionalLight, ovni; 
 let moonMaterials = {
     lambert: new THREE.MeshLambertMaterial({ color: 0xFFFFFF, emissive: 0x222222 }),
     phong: new THREE.MeshPhongMaterial({ color: 0xFFFFFF, shininess: 100, emissive: 0x222222 }),
@@ -282,6 +282,9 @@ function createTerrain(x, y, z, texture) {
     terrain.position.set(x, y, z);
     terrain.rotation.x = -Math.PI / 2; // rotate it to make it flat on the XZ plane
     //terrain.rotation.z = Math.PI / 4;  //TODO: ver como é q deixamos rotações/posição
+
+    // TENTATIVA SPOTLIGHT TIRAR DEPOIS
+    terrain.receiveShadow = true;
     scene.add(terrain);
     
     img = new Image();
@@ -410,31 +413,60 @@ function createOvni(x, y, z){
     console.log(ovni.position)
     
     // Body 
-    const geometryOvniBody = new THREE.SphereGeometry(OVNI_RADIUS, SEGMENTS, SEGMENTS);
-    geometryOvniBody.scale(1, OVNI_SCALE_Y, 1); // achatar em Y
-    const bodyOvni = new THREE.Mesh(geometryOvniBody, ovniMaterials.lambert.body);
-    ovni.add(bodyOvni);
+    const bodyGeometry = new THREE.SphereGeometry(OVNI_RADIUS, SEGMENTS, SEGMENTS);
+    bodyGeometry.scale(1, OVNI_SCALE_Y, 1); // achatar em Y
+    const body = new THREE.Mesh(bodyGeometry, ovniMaterials.lambert.body);
+    ovni.add(body);
 
     // Cockpit ovni
-    const geometryCockpit = new THREE.SphereGeometry(OVNI_COCKPIT_RADIUS, SEGMENTS, SEGMENTS, 0, Math.PI * 2, 0, Math.PI / 2);
-    const cockpit = new THREE.Mesh(geometryCockpit, ovniMaterials.lambert.cockpit);
+    const cockpitGeometry = new THREE.SphereGeometry(OVNI_COCKPIT_RADIUS, SEGMENTS, SEGMENTS, 0, Math.PI * 2, 0, Math.PI / 2);
+    const cockpit = new THREE.Mesh(cockpitGeometry, ovniMaterials.lambert.cockpit);
     cockpit.position.y = OVNI_HEIGHT / 2 ; 
     cockpit.name = 'ovni-cockpit'
     ovni.add(cockpit);
 
     // Spotlight
-    const geometrySpotlightHolder = new THREE.CylinderGeometry(OVNI_COCKPIT_RADIUS, OVNI_COCKPIT_RADIUS, OVNI_SPOTLIGHT_HEIGHT, SEGMENTS);
-    const spotlightHolder = new THREE.Mesh(geometrySpotlightHolder, ovniMaterials.lambert.body);
-    spotlightHolder.position.y = -OVNI_HEIGHT / 2;
-    ovni.add(spotlightHolder);
+    const baseGeometry = new THREE.CylinderGeometry(OVNI_COCKPIT_RADIUS, OVNI_COCKPIT_RADIUS, OVNI_BASE_HEIGHT, SEGMENTS);
+    const base = new THREE.Mesh(baseGeometry, ovniMaterials.lambert.body);
+    base.position.y = - OVNI_HEIGHT / 2;
+    ovni.add(base);
 
     // Small lights and center spotlight
-    ovni.pointLights = createOvniLights(bodyOvni);
-    ovniSpotLight = new THREE.SpotLight(0xFFFFFF, 1, 30, Math.PI / 6);
-    ovniSpotLight.position.set(0, -1.5, 0);
-    ovniSpotLight.target.position.set(0, -10, 0);
-    ovni.add(ovniSpotLight);
-    ovni.add(ovniSpotLight.target);
+    ovni.pointLights = createOvniLights(body);
+    // spotLight.position.set(0, -OVNI_BASE_HEIGHT/2, 0);
+
+    // Create a spotlight to shine down from the base
+    const spotlight = new THREE.SpotLight(0xffffff, 2, 50, Math.PI / 6, 0.5, 2);
+
+    // Set the target of the spotlight (you can move this target if needed)
+    const target = new THREE.Object3D();
+    target.position.set(0, -50, 0); // Downward in local space mudar para n tar hardcoded
+    spotlight.target = target;
+
+    // TENTATIVA SPOTLIGHT TIRAR DEPOIS
+    spotlight.castShadow = true;
+    ovni.castShadow = true;
+    body.castShadow = true;
+    body.receiveShadow = true;
+    base.castShadow = true;
+    base.receiveShadow = true;
+
+    // Optional: make the spotlight visible with a helper (for debugging)
+    const helper = new THREE.SpotLightHelper(spotlight);
+    base.add(helper);
+
+    // Add spotlight to the UFO group
+    base.add(spotlight);
+    base.add(spotlight.target);
+    ovni.spotLight = spotlight;
+
+    // TIRAR DEPOIS
+    const marker = new THREE.Mesh(
+        new THREE.SphereGeometry(1, 8, 8),
+        new THREE.MeshBasicMaterial({ color: 'red' })
+    );
+    marker.position.copy(spotlight.target.position);
+    scene.add(marker);
 
     ovni.movementVector = {
         ArrowUp: false,
@@ -446,7 +478,7 @@ function createOvni(x, y, z){
     ovni.lightsOn = true;
 }
 
-function createOvniLights(bodyOvni){
+function createOvniLights(ovniBody){
     const pointLights = [];
     for (let i = 0; i < OVNI_NUM_LIGHTS; i++) {
         const angle = (i / OVNI_NUM_LIGHTS) * Math.PI * 2;
@@ -458,11 +490,11 @@ function createOvniLights(bodyOvni){
         const bulb = new THREE.Mesh(geometry, material);
         bulb.position.set(x, - OVNI_HEIGHT * 0.65, z);
         bulb.name = 'ovni-bulb';
-        bodyOvni.add(bulb);
+        ovniBody.add(bulb);
 
         const light = new THREE.PointLight(0xffffff, 1, 10);
         light.position.copy(bulb.position);
-        bodyOvni.add(light);
+        ovniBody.add(light);
         pointLights.push(light);
     }
 
@@ -574,6 +606,11 @@ function init() {
     document.body.appendChild(renderer.domElement);
     allowVRmode();
 
+    // TENTATIVA SPOTLIGHT TIRAR DEPOIS
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+
     createScene();
     createCamera();
 
@@ -663,6 +700,7 @@ function onKeyDown(e) {
             console.log('p pressed');
             updateLights(ovni.pointLights, ovni.lightsOn);
             // updateLights(ovni.pointLights, true); // ALTERNATIVA
+            updateLights([ovni.spotLight], true);
             break;
         case 's':
         case 'S':
@@ -670,6 +708,7 @@ function onKeyDown(e) {
             console.log('s pressed');
             updateLights(ovni.pointLights, ovni.lightsOn);
             // updateLights(ovni.pointLights, false); // ALTERNATIVA
+            updateLights([ovni.spotLight], false);
             break;
         case 'ArrowUp':
         case 'ArrowDown':
