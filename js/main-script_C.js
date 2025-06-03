@@ -423,7 +423,7 @@ function createOvni(x, y, z){
     ovni.add(spotlightHolder);
 
     // Small lights and center spotlight
-    createOvniLights(bodyOvni);
+    ovni.pointLights = createOvniLights(bodyOvni);
     ovniSpotLight = new THREE.SpotLight(0xFFFFFF, 1, 30, Math.PI / 6);
     ovniSpotLight.position.set(0, -1.5, 0);
     ovniSpotLight.target.position.set(0, -10, 0);
@@ -436,6 +436,8 @@ function createOvni(x, y, z){
         ArrowLeft: false,
         ArrowRight: false,
     };
+
+    ovni.lightsOn = true;
 }
 
 function createOvniLights(bodyOvni){
@@ -445,7 +447,7 @@ function createOvniLights(bodyOvni){
         const x = Math.cos(angle) * OVNI_LIGHTS_RADIUS;
         const z = Math.sin(angle) * OVNI_LIGHTS_RADIUS;
         
-        const geometry = new THREE.SphereGeometry(0.5, 16, 16);
+        const geometry = new THREE.SphereGeometry(0.5, 16, 16);             // quando estao desligadas parece q a luz continua
         const material = new THREE.MeshStandardMaterial({ color: 0xFFFFAA, emissive: 0xFFFFAA });
         const bulb = new THREE.Mesh(geometry, material);
         bulb.position.set(x, - OVNI_HEIGHT * 0.65, z);
@@ -457,6 +459,8 @@ function createOvniLights(bodyOvni){
         bodyOvni.add(light);
         pointLights.push(light);
     }
+
+    return pointLights;
 }
 
 //////////////////////
@@ -476,6 +480,16 @@ function createOvniLights(bodyOvni){
 function update() {
     const delta = clock.getDelta();
     updateOvni(delta);
+    // se calhar n faz sentido estar sempre a chamar isto constantemente no update?
+    // updateLights(ovni.pointLights, ovni.lightsOn);
+    // updateLights([directionalLight], directionalLight.lightOn);
+}
+
+function updateLights(lights, lightsOn) {
+    for (const light of lights) {
+        // if lightsOn is true, make the light visible
+        light.visible = lightsOn;
+    }
 }
 
 function updateOvni(delta){
@@ -589,10 +603,25 @@ function onKeyDown(e) {
             updateMaterials("toon");
             break;
         case 'd':
-        case 'D':
-            if (directionalLight) {
-                directionalLight.visible = !directionalLight.visible;
+        case 'D':   // é necessário o if?
+            if (directionalLight) { // NOTA: será boa ideia fazer diretamente aqui?
+                // directionalLight.visible = !directionalLight.visible;
+                updateLights([directionalLight], !directionalLight.visible); // ALTERNATIVA
             }
+            break;
+        case 'p':
+        case 'P':
+            ovni.lightsOn = true;
+            console.log('p pressed');
+            updateLights(ovni.pointLights, ovni.lightsOn);
+            // updateLights(ovni.pointLights, true); // ALTERNATIVA
+            break;
+        case 's':
+        case 'S':
+            ovni.lightsOn = false;
+            console.log('s pressed');
+            updateLights(ovni.pointLights, ovni.lightsOn);
+            // updateLights(ovni.pointLights, false); // ALTERNATIVA
             break;
         case 'ArrowUp':
         case 'ArrowDown':
