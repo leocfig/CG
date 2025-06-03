@@ -97,6 +97,7 @@ const ovniMaterials = {
 let camera, orthoCamera, perspectiveCamera;
 let heightData, img;
 let heightmapWidth, heightmapHeight;
+let useStereo, stereoCamera;
 const clock = new THREE.Clock();
 
 /////////////////////
@@ -134,6 +135,10 @@ function createCamera() {
         1, 1000
     );
     perspectiveCamera = new THREE.PerspectiveCamera(70, aspect, 1, 1000);
+
+    stereoCamera = new THREE.StereoCamera();
+    stereoCamera.aspect = 0.5;
+    useStereo = false;
 
     setFrontView(); // Default to front view
 }
@@ -177,8 +182,8 @@ function setTopView() {
     camera = orthoCamera;
 }
 
-function setPerspectiveView() {
-    perspectiveCamera.position.set(50, 15, 80);
+function setFixedPerspectiveView() {
+    perspectiveCamera.position.set(100, 100, 100);
     perspectiveCamera.lookAt(scene.position);
     camera = perspectiveCamera;
 }
@@ -528,6 +533,26 @@ function render() {
     renderer.render(scene, camera);
 }
 
+function renderStereo() {
+    stereoCamera.update(camera);
+    renderer.setScissorTest(true);
+
+    const width = window.innerWidth / 2;
+    const height = window.innerHeight;
+
+    // Olho esquerdo
+    renderer.setScissor(0, 0, width, height);
+    renderer.setViewport(0, 0, width, height);
+    renderer.render(scene, stereoCamera.cameraL);
+
+    // Olho direito
+    renderer.setScissor(width, 0, width, height);
+    renderer.setViewport(width, 0, width, height);
+    renderer.render(scene, stereoCamera.cameraR);
+
+    renderer.setScissorTest(false);
+}
+
 ////////////////////////////////
 /* INITIALIZE ANIMATION CYCLE */
 ////////////////////////////////
@@ -551,7 +576,11 @@ function init() {
 /////////////////////
 function animate() {
     update();
-    render();
+    if (useStereo) {
+        renderStereo();
+    } else {
+        render();
+    }
     requestAnimationFrame(animate);
 }
 
@@ -579,7 +608,8 @@ function onKeyDown(e) {
             createSkyTexture();
             break;
         case '7':
-            setPerspectiveView();
+            setFixedPerspectiveView();
+            useStereo = true;
             break;
         case '8': // vai ser para tirar
             setFrontView();
