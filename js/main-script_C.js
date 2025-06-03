@@ -6,6 +6,7 @@ import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 
 // DÚVIDAS
 
+// Que câmara é colocada como default?
 
 ///////////////
 /* CONSTANTS */
@@ -97,7 +98,7 @@ const ovniMaterials = {
 let camera, orthoCamera, perspectiveCamera;
 let heightData, img;
 let heightmapWidth, heightmapHeight;
-let useStereo, stereoCamera;
+//let useStereo, stereoCamera;
 const clock = new THREE.Clock();
 
 /////////////////////
@@ -136,9 +137,9 @@ function createCamera() {
     );
     perspectiveCamera = new THREE.PerspectiveCamera(70, aspect, 1, 1000);
 
-    stereoCamera = new THREE.StereoCamera();
-    stereoCamera.aspect = 0.5;
-    useStereo = false;
+    // stereoCamera = new THREE.StereoCamera();
+    // stereoCamera.aspect = 0.5;
+    // useStereo = false;
 
     setFrontView(); // Default to front view
 }
@@ -533,24 +534,33 @@ function render() {
     renderer.render(scene, camera);
 }
 
-function renderStereo() {
-    stereoCamera.update(camera);
-    renderer.setScissorTest(true);
+// function renderStereo() {
+//     stereoCamera.update(camera);
+//     renderer.setScissorTest(true);
 
-    const width = window.innerWidth / 2;
-    const height = window.innerHeight;
+//     const width = window.innerWidth / 2;
+//     const height = window.innerHeight;
 
-    // Olho esquerdo
-    renderer.setScissor(0, 0, width, height);
-    renderer.setViewport(0, 0, width, height);
-    renderer.render(scene, stereoCamera.cameraL);
+//     // Olho esquerdo
+//     renderer.setScissor(0, 0, width, height);
+//     renderer.setViewport(0, 0, width, height);
+//     renderer.render(scene, stereoCamera.cameraL);
 
-    // Olho direito
-    renderer.setScissor(width, 0, width, height);
-    renderer.setViewport(width, 0, width, height);
-    renderer.render(scene, stereoCamera.cameraR);
+//     // Olho direito
+//     renderer.setScissor(width, 0, width, height);
+//     renderer.setViewport(width, 0, width, height);
+//     renderer.render(scene, stereoCamera.cameraR);
 
-    renderer.setScissorTest(false);
+//     renderer.setScissorTest(false);
+// }
+
+////////////////////////////////
+/*           VR Mode          */
+////////////////////////////////
+
+function allowVRmode() {
+    renderer.xr.enabled = true;
+    document.body.appendChild(VRButton.createButton(renderer));
 }
 
 ////////////////////////////////
@@ -562,6 +572,7 @@ function init() {
     });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
+    allowVRmode();
 
     createScene();
     createCamera();
@@ -574,14 +585,21 @@ function init() {
 /////////////////////
 /* ANIMATION CYCLE */
 /////////////////////
-function animate() {
-    update();
-    if (useStereo) {
-        renderStereo();
-    } else {
+//function animate() {
+    // update();
+    // if (useStereo) {
+    //     renderStereo();
+    // } else {
+    // render();
+    // }
+    // requestAnimationFrame(animate);
+//}
+
+function startXRLoop() {
+    renderer.setAnimationLoop(() => {
+        update();
         render();
-    }
-    requestAnimationFrame(animate);
+    });
 }
 
 ////////////////////////////
@@ -609,7 +627,7 @@ function onKeyDown(e) {
             break;
         case '7':
             setFixedPerspectiveView();
-            useStereo = true;
+            //useStereo = true;
             break;
         case '8': // vai ser para tirar
             setFrontView();
@@ -679,4 +697,5 @@ function onKeyUp(e) {
 }
 
 init();
-animate();
+//animate();
+startXRLoop();
