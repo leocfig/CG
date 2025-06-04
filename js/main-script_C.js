@@ -7,6 +7,7 @@ import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 // DÚVIDAS
 
 // Que câmara é colocada como default?
+// Ter as posições das árvores num array dentro da função de ScatterTrees?
 
 ///////////////
 /* CONSTANTS */
@@ -98,7 +99,6 @@ const ovniMaterials = {
 let camera, orthoCamera, perspectiveCamera;
 let heightData, img;
 let heightmapWidth, heightmapHeight;
-//let useStereo, stereoCamera;
 const clock = new THREE.Clock();
 
 /////////////////////
@@ -110,8 +110,7 @@ function createScene() {
     createCanvasTexture(CANVAS_WIDTH, CANVAS_HEIGHT);
     createSkydome(textureSky);
     // createTerrain(0, - PLANE_HEIGHT / 2, 0, textureFloral);
-    createTerrain(0,  -SKYDOME_RADIUS / 2, 0, textureFloral);
-    //scatterTrees(NUMBER_TREES);
+    createTerrain(0,  -SKYDOME_RADIUS / 2, 0, textureFloral, 'pictures/heightmap.png');
     createMoon();
     createLight();
     createOvni(0, 0, 0)
@@ -130,6 +129,7 @@ function createLight (){
 //////////////////////
 
 function createCamera() {
+    // FIXME: depois tirar a câmara ortogonal
     orthoCamera = new THREE.OrthographicCamera(
         -size * aspect, size * aspect,
         size, -size,
@@ -137,11 +137,7 @@ function createCamera() {
     );
     perspectiveCamera = new THREE.PerspectiveCamera(70, aspect, 1, 1000);
 
-    // stereoCamera = new THREE.StereoCamera();
-    // stereoCamera.aspect = 0.5;
-    // useStereo = false;
-
-    setFrontView(); // Default to front view
+    setFixedPerspectiveView();
 }
 
 function setFrontView() {
@@ -262,12 +258,11 @@ function createMoon() {
     scene.add(moon);
 }
 
-function createTerrain(x, y, z, texture) {
+function createTerrain(x, y, z, texture, heightmap) {
     //const geometry = new THREE.CircleGeometry(SKYDOME_RADIUS, SEGMENTS)
     const geometry = new THREE.PlaneGeometry(PLANE_WIDTH, PLANE_HEIGHT, 64, 64);
 
-    // TODO: mudar cenas para ficar mais abstrato
-    const terrainTexture = loader.load( 'pictures/heightmap.png' );
+    const terrainTexture = loader.load(heightmap);
     texture.colorSpace = THREE.SRGBColorSpace;      // este material precisa de luz!!
     const material = new THREE.MeshPhongMaterial({  // usar phong? antes usei standard q é mais accurate em termos de física, pior em termos de performance (mais pesado)
         map: texture,                               //TODO: ver wrapping / filtering das aulas teóricas
@@ -399,11 +394,22 @@ function createTree(x, y, z) {
 }
 
 function scatterTrees(count) {
-    for (let i = 0; i < count; i++) {
-        const x = randInt(-PLANE_WIDTH / 2 + edgeMargin, PLANE_WIDTH / 2 - edgeMargin);
-        const z = randInt(-PLANE_HEIGHT / 2 + edgeMargin, PLANE_HEIGHT / 2 - edgeMargin);
-        const y = getHeightAt(x, z, heightData, heightmapWidth, heightmapHeight, PLANE_WIDTH, MAX_TERRAIN_HEIGHT);
-        createTree(x, y -SKYDOME_RADIUS / 2, z);
+
+    // Fixed x and z coordinates for the trees
+    const positions = [
+        { x: -50, z: -30 }, { x: -10, z: 0 }, { x: 15, z: 15 }, { x: -50, z: 15 }, { x: -50, z: -50 },
+        { x: -100, z: -20 }, { x: -60, z: -10 }, { x: 0, z: -15 }, { x: 30, z: 45 }, { x: -80, z: -40 },
+        { x: -30, z: 10 }, { x: -70, z: 25 }, { x: -20, z: -35 }, { x: 10, z: -10 }, { x: 5, z: 30 },
+        { x: -90, z: 0 }, { x: -40, z: 40 }, { x: 35, z: -25 }, { x: -25, z: 50 }, { x: -25, z: 100 },
+        { x: -5, z: -50 }, { x: 50, z: -60 }, { x: 75, z: 30 }, { x: 60, z: 70 }, { x: -85, z: 60 },
+        { x: 20, z: -70 }, { x: -15, z: 80 }, { x: 90, z: -10 }, { x: 40, z: 90 }, { x: -65, z: 85 },
+        { x: 0, z: 100 }, { x: 100, z: 0 }, { x: 70, z: -40 }, { x: -100, z: 40 }, { x: 45, z: -90 },
+        { x: 85, z: -80 }
+    ];
+
+    for (const pos of positions) {
+        const y = getHeightAt(pos.x, pos.z, heightData, heightmapWidth, heightmapHeight, PLANE_WIDTH, MAX_TERRAIN_HEIGHT);
+        createTree(pos.x, y - SKYDOME_RADIUS / 2, pos.z);
     }
 }
 
@@ -566,30 +572,9 @@ function render() {
     renderer.render(scene, camera);
 }
 
-// function renderStereo() {
-//     stereoCamera.update(camera);
-//     renderer.setScissorTest(true);
-
-//     const width = window.innerWidth / 2;
-//     const height = window.innerHeight;
-
-//     // Olho esquerdo
-//     renderer.setScissor(0, 0, width, height);
-//     renderer.setViewport(0, 0, width, height);
-//     renderer.render(scene, stereoCamera.cameraL);
-
-//     // Olho direito
-//     renderer.setScissor(width, 0, width, height);
-//     renderer.setViewport(width, 0, width, height);
-//     renderer.render(scene, stereoCamera.cameraR);
-
-//     renderer.setScissorTest(false);
-// }
-
 ////////////////////////////////
 /*           VR Mode          */
 ////////////////////////////////
-
 function allowVRmode() {
     renderer.xr.enabled = true;
     document.body.appendChild(VRButton.createButton(renderer));
@@ -604,12 +589,11 @@ function init() {
     });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
-    allowVRmode();
+    //allowVRmode();
 
     // TENTATIVA SPOTLIGHT TIRAR DEPOIS
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
 
     createScene();
     createCamera();
@@ -632,7 +616,7 @@ function init() {
     // requestAnimationFrame(animate);
 //}
 
-function startXRLoop() {
+function startXRLoop() {                // TOASK -> então fica assim? É suposto não existir animate? Ou só depois de se clicar na tecla 7?
     renderer.setAnimationLoop(() => {
         update();
         render();
@@ -663,8 +647,8 @@ function onKeyDown(e) {
             createSkyTexture();
             break;
         case '7':
-            setFixedPerspectiveView();
-            //useStereo = true;
+            //setFixedPerspectiveView();
+            allowVRmode();                  // TOASK -> então é assim? Quando clicamos na tecla 7 permitimos o VR mode?
             break;
         case '8': // vai ser para tirar
             setFrontView();
