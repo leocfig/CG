@@ -283,7 +283,7 @@ function createTerrain(x, y, z, texture, heightmap) {
     scene.add(terrain);
     
     img = new Image();
-    img.src = 'pictures/heightmap.png';
+    img.src = heightmap;
     img.onload = () => {
         heightmapWidth = img.naturalWidth;
         heightmapHeight = img.naturalHeight;
@@ -647,8 +647,8 @@ function onKeyDown(e) {
             createSkyTexture();
             break;
         case '7':
-            //setFixedPerspectiveView();
-            allowVRmode();                  // TOASK -> então é assim? Quando clicamos na tecla 7 permitimos o VR mode?
+            setFixedPerspectiveView();      // For debug
+            allowVRmode();                  // TOASK -> então é assim? Quando clicamos na tecla 7 permitimos o VR mode? E o que acontece se clicarmos 2+ vezes?
             break;
         case '8': // vai ser para tirar
             setFrontView();
