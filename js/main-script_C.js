@@ -135,7 +135,7 @@ function createCamera() {
         size, -size,
         1, 1000
     );
-    perspectiveCamera = new THREE.PerspectiveCamera(70, aspect, 1, 1000);
+    //perspectiveCamera = new THREE.PerspectiveCamera(70, aspect, 1, 1000);
 
     setFixedPerspectiveView();
 }
@@ -180,6 +180,8 @@ function setTopView() {
 }
 
 function setFixedPerspectiveView() {
+    // FIXME
+    perspectiveCamera = new THREE.PerspectiveCamera(70, aspect, 1, 1000);
     perspectiveCamera.position.set(100, 100, 100);
     perspectiveCamera.lookAt(scene.position);
     camera = perspectiveCamera;
@@ -575,9 +577,13 @@ function render() {
 ////////////////////////////////
 /*           VR Mode          */
 ////////////////////////////////
-function allowVRmode() {
+function enableVRmode() {
     renderer.xr.enabled = true;
     document.body.appendChild(VRButton.createButton(renderer));
+}
+
+function disableVRmode() {
+    renderer.xr.enabled = false;
 }
 
 ////////////////////////////////
@@ -589,7 +595,7 @@ function init() {
     });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
-    //allowVRmode();
+    enableVRmode();
 
     // TENTATIVA SPOTLIGHT TIRAR DEPOIS
     renderer.shadowMap.enabled = true;
@@ -647,8 +653,11 @@ function onKeyDown(e) {
             createSkyTexture();
             break;
         case '7':
-            setFixedPerspectiveView();      // For debug
-            allowVRmode();                  // TOASK -> então é assim? Quando clicamos na tecla 7 permitimos o VR mode? E o que acontece se clicarmos 2+ vezes?
+            // Only disable VR mode if the user is currently in a VR session 
+            if (renderer.xr.isPresenting) {
+                disableVRmode();
+            }
+            setFixedPerspectiveView();
             break;
         case '8': // vai ser para tirar
             setFrontView();
