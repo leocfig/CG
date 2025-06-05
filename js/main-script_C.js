@@ -98,14 +98,14 @@ const materialLibrary = {
         treeFoliage: new THREE.MeshLambertMaterial({ color: 0X0f3d0f }),
     },
     phong: {
-        moon: new THREE.MeshPhongMaterial({ color: 0xFFFFFF, shininess: 100, emissive: 0x222222 }),
+        moon: new THREE.MeshPhongMaterial({ color: 0xFFFFFF, shininess: 100, emissive: 0x444444 }),
         ovniBody: new THREE.MeshPhongMaterial({ color: 0xbf0453, shininess: 100, emissive: 0x222222 }),
         ovniCockpit: new THREE.MeshPhongMaterial({
             color: 0x88ccff,
-            shininess: 5,
-            emissive: 0x222222,
             transparent: true,
             opacity: 0.7,
+            shininess: 5,
+            emissive: 0x222222,
             specular: 0xffffaa,
             side: THREE.DoubleSide
         }),
@@ -115,18 +115,33 @@ const materialLibrary = {
         treeFoliage: new THREE.MeshPhongMaterial({ color: 0X0f3d0f }),
     },
     toon: {
-        moon: new THREE.MeshToonMaterial({ color: 0xFFFFFF }),
-        ovniBody: new THREE.MeshToonMaterial({ color: 0xbf0453 }),
+        moon: new THREE.MeshToonMaterial({ color: 0xFFFFFF, emissive: 0x444444 }),
+        ovniBody: new THREE.MeshToonMaterial({ color: 0xbf0453, emissive: 0x222222 }),
         ovniCockpit: new THREE.MeshToonMaterial({
             color: 0x88ccff,
             transparent: true,
             opacity: 0.7,
+            emissive: 0x222222,
             side: THREE.DoubleSide
         }),
         ovniLights: new THREE.MeshToonMaterial({ color: 0xFFFFAA, emissive: 0xFFFFAA }),
         treeBark: new THREE.MeshToonMaterial({ color: 0xa64500 }),
         treeDebarked: new THREE.MeshToonMaterial({ color: 0x5e3c1a }),
         treeFoliage: new THREE.MeshToonMaterial({ color: 0X0f3d0f }),
+    },
+    basic: {
+        moon: new THREE.MeshBasicMaterial({ color: 0xFFFFFF }),
+        ovniBody: new THREE.MeshBasicMaterial({ color: 0xbf0453 }),
+        ovniCockpit: new THREE.MeshBasicMaterial({
+            color: 0x88ccff,
+            transparent: true,
+            opacity: 0.7,
+            side: THREE.DoubleSide
+        }),
+        ovniLights: new THREE.MeshBasicMaterial({ color: 0xFFFFAA }),
+        treeBark: new THREE.MeshBasicMaterial({ color: 0xa64500 }),
+        treeDebarked: new THREE.MeshBasicMaterial({ color: 0x5e3c1a }),
+        treeFoliage: new THREE.MeshBasicMaterial({ color: 0X0f3d0f }),
     }
 };
 
@@ -136,6 +151,7 @@ let camera, orthoCamera, perspectiveCamera;
 let heightData, img;
 let heightmapWidth, heightmapHeight;
 let currentMaterial;
+let calculateLighting;
 const clock = new THREE.Clock();
 
 /////////////////////
@@ -145,6 +161,7 @@ function createScene() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color('#FFFFFF'); // White
     currentMaterial = "lambert";
+    calculateLighting = true;
     createCanvasTexture(CANVAS_WIDTH, CANVAS_HEIGHT);
     createFieldTexture();
     createSkyTexture();
@@ -596,7 +613,8 @@ function update() {
     updateLights([directionalLight], directionalLight.lightOn);
     updateLights(ovni.pointLights, ovni.lightsOn);
     updateLights([ovni.spotLight], ovni.lightsOn);
-    switchMaterial(currentMaterial);
+    if (calculateLighting) switchMaterial(currentMaterial);
+    else switchMaterial("basic");
 }
 
 function updateLights(lights, lightsOn) {
@@ -770,6 +788,10 @@ function onKeyDown(e) {
         case 'e':
         case 'E':
             currentMaterial = "toon";
+            break;
+        case 'r':
+        case 'R':
+            calculateLighting = !calculateLighting;
             break;
         case 'd':
         case 'D':
