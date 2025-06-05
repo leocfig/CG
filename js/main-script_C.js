@@ -115,8 +115,9 @@ function createScene() {
     scene.background = new THREE.Color('#FFFFFF'); // White
     currentMaterial = "lambert";
     createCanvasTexture(CANVAS_WIDTH, CANVAS_HEIGHT);
+    createFieldTexture();
+    createSkyTexture();
     createSkydome(textureSky);
-    // createTerrain(0, - PLANE_HEIGHT / 2, 0, textureFloral);
     createTerrain(0,  -SKYDOME_RADIUS / 2, 0, textureFloral, 'pictures/heightmap.png');
     createMoon();
     createLight();
@@ -204,11 +205,15 @@ function setFixedPerspectiveView() {
 ////////////////////////
 
 function createCanvasTexture(width, height) {
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    textureSky = new THREE.CanvasTexture(canvas);
-    textureFloral = new THREE.CanvasTexture(canvas);
+    const canvasSky = document.createElement('canvas');
+    canvasSky.width = width;
+    canvasSky.height = height;
+    textureSky = new THREE.CanvasTexture(canvasSky);
+
+    const canvasFloral = document.createElement('canvas');
+    canvasFloral.width = width;
+    canvasFloral.height = height;
+    textureFloral = new THREE.CanvasTexture(canvasFloral);
 }
 
 function randInt(min, max) {
