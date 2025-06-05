@@ -76,29 +76,35 @@ const MAX_OVNI_RADIUS = Math.sqrt(SKYDOME_RADIUS*SKYDOME_RADIUS - SKYDOME_RADIUS
 const loader = new THREE.TextureLoader();
 const aspect = window.innerWidth / window.innerHeight;
 const size = 70;
-let scene, renderer, textureFloral, textureSky, skydome, moon, directionalLight, ovni; 
-let moonMaterials = {
-    lambert: new THREE.MeshLambertMaterial({ color: 0xFFFFFF, emissive: 0x222222 }),
-    phong: new THREE.MeshPhongMaterial({ color: 0xFFFFFF, shininess: 100, emissive: 0x222222 }),
-    toon: new THREE.MeshToonMaterial({ color: 0xFFFFFF })
-};
-const ovniMaterials = {
+let scene, renderer, textureFloral, textureSky, skydome, moon, directionalLight, ovni;
+
+const materialLibrary = {
     lambert: {
-        body: new THREE.MeshLambertMaterial({ color: 0xbf0453, emissive: 0x222222 }),
-        cockpit: new THREE.MeshLambertMaterial({ color: 0xfae1fd, emissive: 0x222222 })
+        moon: new THREE.MeshLambertMaterial({ color: 0xFFFFFF, emissive: 0x222222 }),
+        ovniBody: new THREE.MeshLambertMaterial({ color: 0xbf0453, emissive: 0x222222 }),
+        ovniCockpit: new THREE.MeshLambertMaterial({ color: 0xfae1fd, emissive: 0x222222 }),
+        ovniLights: new THREE.MeshLambertMaterial({ color: 0xFFFFAA, emissive: 0xFFFFAA }),
     },
     phong: {
-        body: new THREE.MeshPhongMaterial({ color: 0xbf0453, shininess: 100, emissive: 0x222222 }),
-        cockpit: new THREE.MeshPhongMaterial({ color: 0xfae1fd, shininess: 100, emissive: 0x222222 })
+        moon: new THREE.MeshPhongMaterial({ color: 0xFFFFFF, shininess: 100, emissive: 0x222222 }),
+        ovniBody: new THREE.MeshPhongMaterial({ color: 0xbf0453, shininess: 100, emissive: 0x222222 }),
+        ovniCockpit: new THREE.MeshPhongMaterial({ color: 0xfae1fd, shininess: 100, emissive: 0x222222 }),
+        ovniLights: new THREE.MeshPhongMaterial({ color: 0xFFFFAA, shininess: 100, emissive: 0xFFFFAA }),
     },
     toon: {
-        body: new THREE.MeshToonMaterial({ color: 0xbf0453 }),
-        cockpit: new THREE.MeshToonMaterial({ color: 0xfae1fd })
+        moon: new THREE.MeshToonMaterial({ color: 0xFFFFFF }),
+        ovniBody: new THREE.MeshToonMaterial({ color: 0xbf0453 }),
+        ovniCockpit: new THREE.MeshToonMaterial({ color: 0xfae1fd }),
+        ovniLights: new THREE.MeshToonMaterial({ color: 0xFFFFAA, emissive: 0xFFFFAA }),
     }
 };
+
+const materialTargets = {};
+
 let camera, orthoCamera, perspectiveCamera;
 let heightData, img;
 let heightmapWidth, heightmapHeight;
+let currentMaterial;
 const clock = new THREE.Clock();
 
 /////////////////////
@@ -107,6 +113,7 @@ const clock = new THREE.Clock();
 function createScene() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color('#FFFFFF'); // White
+    currentMaterial = "lambert";
     createCanvasTexture(CANVAS_WIDTH, CANVAS_HEIGHT);
     createSkydome(textureSky);
     // createTerrain(0, - PLANE_HEIGHT / 2, 0, textureFloral);
@@ -119,6 +126,7 @@ function createScene() {
 function createLight (){
     directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1);
     directionalLight.position.set(50, 30, 80);
+    directionalLight.lightOn = true;
     scene.add(directionalLight);
     // const ambientLight = new THREE.AmbientLight(0xffffff, 2.5); // TODO: mudar luzes dps -> escolher uma 
     // scene.add(ambientLight);
@@ -255,9 +263,12 @@ function createSkyTexture() {
 
 function createMoon() {
     const geometry = new THREE.SphereGeometry(MOON_RADIUS, SEGMENTS, SEGMENTS);
-    moon = new THREE.Mesh(geometry, moonMaterials.lambert); 
+    moon = new THREE.Mesh(geometry, materialLibrary.lambert.moon); 
     moon.position.set(MOON_OFFSET_X, MOON_OFFSET_Y, MOON_OFFSET_Z);
     scene.add(moon);
+
+    // Register to global target
+    materialTargets.moon = moon;
 }
 
 function createTerrain(x, y, z, texture, heightmap) {
@@ -392,6 +403,7 @@ function createTree(x, y, z) {
     tree.add(foliage2);
 
     tree.position.set(x, y, z);
+    tree.receiveShadow = true;
     scene.add(tree);
 }
 
@@ -423,88 +435,88 @@ function createOvni(x, y, z){
     // Body 
     const bodyGeometry = new THREE.SphereGeometry(OVNI_RADIUS, SEGMENTS, SEGMENTS);
     bodyGeometry.scale(1, OVNI_SCALE_Y, 1); // achatar em Y
-    const body = new THREE.Mesh(bodyGeometry, ovniMaterials.lambert.body);
+    const body = new THREE.Mesh(bodyGeometry, materialLibrary.lambert.ovniBody);
     ovni.add(body);
 
     // Cockpit ovni
     const cockpitGeometry = new THREE.SphereGeometry(OVNI_COCKPIT_RADIUS, SEGMENTS, SEGMENTS, 0, Math.PI * 2, 0, Math.PI / 2);
-    const cockpit = new THREE.Mesh(cockpitGeometry, ovniMaterials.lambert.cockpit);
-    cockpit.position.y = OVNI_HEIGHT / 2 ; 
-    cockpit.name = 'ovni-cockpit'
+    const cockpit = new THREE.Mesh(cockpitGeometry, materialLibrary.lambert.ovniCockpit);
+    cockpit.position.y = OVNI_HEIGHT / 2 ;
     ovni.add(cockpit);
 
     // Spotlight
     const baseGeometry = new THREE.CylinderGeometry(OVNI_COCKPIT_RADIUS, OVNI_COCKPIT_RADIUS, OVNI_BASE_HEIGHT, SEGMENTS);
-    const base = new THREE.Mesh(baseGeometry, ovniMaterials.lambert.body);
+    const base = new THREE.Mesh(baseGeometry, materialLibrary.lambert.ovniBody);
     base.position.y = - OVNI_HEIGHT / 2;
     ovni.add(base);
 
+    // Register to global target
+    materialTargets.ovni = {
+        body: body,
+        cockpit: cockpit,
+        base: base
+    }
+
     // Small lights and center spotlight
     ovni.pointLights = createOvniLights(body);
-    // spotLight.position.set(0, -OVNI_BASE_HEIGHT/2, 0);
-
     // Create a spotlight to shine down from the base
-    const spotlight = new THREE.SpotLight(0xffffff, 2, 50, Math.PI / 6, 0.5, 2);
+    const spotlight = new THREE.SpotLight(0xffffff, 5, SKYDOME_RADIUS / 2, Math.PI / 6, 0.5, 0);
+    spotlight.position.set(0, -OVNI_BASE_HEIGHT/2, 0);
 
     // Set the target of the spotlight (you can move this target if needed)
     const target = new THREE.Object3D();
-    target.position.set(0, -50, 0); // Downward in local space mudar para n tar hardcoded
+    target.position.set(0, -SKYDOME_RADIUS / 2, 0); // Downward in local space mudar para n tar hardcoded
     spotlight.target = target;
-
-    // TENTATIVA SPOTLIGHT TIRAR DEPOIS
-    spotlight.castShadow = true;
-    ovni.castShadow = true;
-    body.castShadow = true;
-    body.receiveShadow = true;
-    base.castShadow = true;
-    base.receiveShadow = true;
-
-    // Optional: make the spotlight visible with a helper (for debugging)
-    const helper = new THREE.SpotLightHelper(spotlight);
-    base.add(helper);
 
     // Add spotlight to the UFO group
     base.add(spotlight);
     base.add(spotlight.target);
     ovni.spotLight = spotlight;
 
-    // TIRAR DEPOIS
-    const marker = new THREE.Mesh(
-        new THREE.SphereGeometry(1, 8, 8),
-        new THREE.MeshBasicMaterial({ color: 'red' })
-    );
-    marker.position.copy(spotlight.target.position);
-    scene.add(marker);
+    // TENTATIVA SPOTLIGHT TIRAR DEPOIS
+    //spotlight.castShadow = true;
+    // ovni.castShadow = true;
+    // body.castShadow = true;
+    // body.receiveShadow = true;
+    // base.castShadow = true;
+    // base.receiveShadow = true;
 
+    // Optional: make the spotlight visible with a helper (for debugging)
+    // const helper = new THREE.SpotLightHelper(spotlight);
+    // base.add(helper);
+
+    ovni.lightsOn = true;
     ovni.movementVector = {
         ArrowUp: false,
         ArrowDown: false,
         ArrowLeft: false,
         ArrowRight: false,
     };
-
-    ovni.lightsOn = true;
 }
 
 function createOvniLights(ovniBody){
     const pointLights = [];
+    const bulbMeshes = [];
+
     for (let i = 0; i < OVNI_NUM_LIGHTS; i++) {
         const angle = (i / OVNI_NUM_LIGHTS) * Math.PI * 2;
         const x = Math.cos(angle) * OVNI_LIGHTS_RADIUS;
         const z = Math.sin(angle) * OVNI_LIGHTS_RADIUS;
         
-        const geometry = new THREE.SphereGeometry(0.5, 16, 16);             // quando estao desligadas parece q a luz continua
-        const material = new THREE.MeshStandardMaterial({ color: 0xFFFFAA, emissive: 0xFFFFAA });
-        const bulb = new THREE.Mesh(geometry, material);
+        const geometry = new THREE.SphereGeometry(0.5, 16, 16);
+        const bulb = new THREE.Mesh(geometry, materialLibrary.lambert.ovniLights);
         bulb.position.set(x, - OVNI_HEIGHT * 0.65, z);
-        bulb.name = 'ovni-bulb';
         ovniBody.add(bulb);
+        bulbMeshes.push(bulb);
 
         const light = new THREE.PointLight(0xffffff, 1, 10);
         light.position.copy(bulb.position);
         ovniBody.add(light);
         pointLights.push(light);
     }
+
+    if (!materialTargets.ovni) materialTargets.ovni = {};
+    materialTargets.ovni.lights = bulbMeshes;
 
     return pointLights;
 }
@@ -526,9 +538,10 @@ function createOvniLights(ovniBody){
 function update() {
     const delta = clock.getDelta();
     updateOvni(delta);
-    // se calhar n faz sentido estar sempre a chamar isto constantemente no update?
-    // updateLights(ovni.pointLights, ovni.lightsOn);
-    // updateLights([directionalLight], directionalLight.lightOn);
+    updateLights([directionalLight], directionalLight.lightOn);
+    updateLights(ovni.pointLights, ovni.lightsOn);
+    updateLights([ovni.spotLight], ovni.lightsOn);
+    switchMaterial(currentMaterial);
 }
 
 function updateLights(lights, lightsOn) {
@@ -554,17 +567,29 @@ function updateOvni(delta){
     if (distanceFromCenter < MAX_OVNI_RADIUS)   ovni.position.add(movement);
 }
 
-function updateMaterials(currentShading) {
-    moon.material = moonMaterials[currentShading];
+function switchMaterial(type) {
+    const materials = materialLibrary[type];
 
-    ovni.traverse((child) => {
-        if (child.isMesh && child.name != 'ovni-bulb') { // only change material of non light objects
-            if (child.name === 'ovni-cockpit')   child.material = ovniMaterials[currentShading].cockpit;
-            else    child.material = ovniMaterials[currentShading].body;
-        }
-    });
+    if (!materials) {
+        console.warn(`Material type "${type}" not found.`);
+        return;
+    }
 
-    // Adiciona os restantes objetos 
+    // Apply to moon
+    if (materialTargets.moon) {
+        materialTargets.moon.material = materials.moon;
+    }
+
+    // Apply to ovni parts
+    const ovniParts = materialTargets.ovni;
+    if (ovniParts) {
+        ovniParts.body.material = materials.ovniBody;
+        ovniParts.base.material = materials.ovniBody;
+        ovniParts.cockpit.material = materials.ovniCockpit;
+        ovniParts.lights.forEach(mesh => {
+            mesh.material = materials.ovniLights;
+        });
+    }
 }
 
 /////////////
@@ -670,47 +695,34 @@ function onKeyDown(e) {
             break;
         case 'q':
         case 'Q':
-            updateMaterials("lambert");
+            currentMaterial = "lambert";
             break;
         case 'w':
         case 'W':
-            updateMaterials("phong");
+            currentMaterial = "phong";
             break;
         case 'e':
         case 'E':
-            updateMaterials("toon");
+            currentMaterial = "toon";
             break;
         case 'd':
-        case 'D':   // é necessário o if?
-            if (directionalLight) { // NOTA: será boa ideia fazer diretamente aqui?
-                // directionalLight.visible = !directionalLight.visible;
-                updateLights([directionalLight], !directionalLight.visible); // ALTERNATIVA
-            }
+        case 'D':
+            directionalLight.lightOn = !directionalLight.visible;
             break;
         case 'p':
         case 'P':
             ovni.lightsOn = true;
-            console.log('p pressed');
-            updateLights(ovni.pointLights, ovni.lightsOn);
-            // updateLights(ovni.pointLights, true); // ALTERNATIVA
-            updateLights([ovni.spotLight], true);
             break;
         case 's':
         case 'S':
             ovni.lightsOn = false;
-            console.log('s pressed');
-            updateLights(ovni.pointLights, ovni.lightsOn);
-            // updateLights(ovni.pointLights, false); // ALTERNATIVA
-            updateLights([ovni.spotLight], false);
             break;
         case 'ArrowUp':
         case 'ArrowDown':
         case 'ArrowLeft':
         case 'ArrowRight':
             ovni.movementVector[e.key] = true;
-            break;
-
-            
+            break;           
     }
 }
 
