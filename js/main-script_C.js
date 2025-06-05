@@ -32,7 +32,6 @@ const PLANE_WIDTH = SKYDOME_RADIUS * 2;
 const PLANE_HEIGHT = SKYDOME_RADIUS * 2;
 
 // Trees
-const NUMBER_TREES = 10;
 const TRUNK_RADIUS = 1;
 const BRANCH_RADIUS = 0.5;
 const DEBARKED_HEIGHT = 4;
@@ -40,8 +39,21 @@ const BARKED_HEIGHT = 8;
 const TREE_HEIGHT = DEBARKED_HEIGHT + BARKED_HEIGHT;
 const BRANCH_HEIGHT = TREE_HEIGHT / 1.5;
 const FOLIAGE_RADIUS = 4;
-const edgeMargin = TREE_HEIGHT * 0.5;
 const foliageY = TREE_HEIGHT * 1.1;
+
+// House
+const HOUSE_OFFSET_X = 55;
+const HOUSE_OFFSET_Z = 0;
+const HOUSE_MAIN_WALL_Z = 10;
+const HOUSE_MAIN_WALL_HEIGHT = 15;
+const HOUSE_MAIN_WALL_LENGTH = 25;
+const HOUSE_SIDE_WALL_LENGTH = 20;
+const HOUSE_SIDE_WALL_X = HOUSE_MAIN_WALL_LENGTH / 2;
+const ROOF_HEIGHT = 10;
+const DOOR_HEIGHT = 10;
+const DOOR_LENGHT = 5;
+const STRIPT_HEIGHT = 3;
+const STRIPT_OFFSET = 0.05; // to avoid z-fighting
 
 // Moon
 const MOON_RADIUS = 10;
@@ -96,16 +108,19 @@ const materialLibrary = {
         treeBark: new THREE.MeshLambertMaterial({ color: 0xa64500 }),
         treeDebarked: new THREE.MeshLambertMaterial({ color: 0x5e3c1a }),
         treeFoliage: new THREE.MeshLambertMaterial({ color: 0X0f3d0f }),
+        house: new THREE.MeshLambertMaterial({ color: 0xffffff }),
+        roof: new THREE.MeshLambertMaterial({ color: 0xff6600 }),
+        door: new THREE.MeshLambertMaterial({ color: 0x8B0000 })
     },
     phong: {
         moon: new THREE.MeshPhongMaterial({ color: 0xFFFFFF, shininess: 100, emissive: 0x444444 }),
         ovniBody: new THREE.MeshPhongMaterial({ color: 0xbf0453, shininess: 100, emissive: 0x222222 }),
         ovniCockpit: new THREE.MeshPhongMaterial({
             color: 0x88ccff,
-            transparent: true,
-            opacity: 0.7,
             shininess: 5,
             emissive: 0x222222,
+            transparent: true,
+            opacity: 0.7,
             specular: 0xffffaa,
             side: THREE.DoubleSide
         }),
@@ -113,6 +128,9 @@ const materialLibrary = {
         treeBark: new THREE.MeshPhongMaterial({ color: 0xa64500 }),
         treeDebarked: new THREE.MeshPhongMaterial({ color: 0x5e3c1a }),
         treeFoliage: new THREE.MeshPhongMaterial({ color: 0X0f3d0f }),
+        house: new THREE.MeshPhongMaterial({ color: 0xffffff }),
+        roof: new THREE.MeshLambertMaterial({ color: 0xff6600 }),
+        door: new THREE.MeshLambertMaterial({ color: 0x8B0000 })
     },
     toon: {
         moon: new THREE.MeshToonMaterial({ color: 0xFFFFFF, emissive: 0x444444 }),
@@ -128,20 +146,9 @@ const materialLibrary = {
         treeBark: new THREE.MeshToonMaterial({ color: 0xa64500 }),
         treeDebarked: new THREE.MeshToonMaterial({ color: 0x5e3c1a }),
         treeFoliage: new THREE.MeshToonMaterial({ color: 0X0f3d0f }),
-    },
-    basic: {
-        moon: new THREE.MeshBasicMaterial({ color: 0xFFFFFF }),
-        ovniBody: new THREE.MeshBasicMaterial({ color: 0xbf0453 }),
-        ovniCockpit: new THREE.MeshBasicMaterial({
-            color: 0x88ccff,
-            transparent: true,
-            opacity: 0.7,
-            side: THREE.DoubleSide
-        }),
-        ovniLights: new THREE.MeshBasicMaterial({ color: 0xFFFFAA }),
-        treeBark: new THREE.MeshBasicMaterial({ color: 0xa64500 }),
-        treeDebarked: new THREE.MeshBasicMaterial({ color: 0x5e3c1a }),
-        treeFoliage: new THREE.MeshBasicMaterial({ color: 0X0f3d0f }),
+        house: new THREE.MeshToonMaterial({ color: 0xffffff }),
+        roof: new THREE.MeshLambertMaterial({ color: 0xff6600 }),
+        door: new THREE.MeshLambertMaterial({ color: 0x8B0000 })
     }
 };
 
@@ -168,33 +175,13 @@ function createScene() {
     createSkydome(textureSky);
     createTerrain(0, -SKYDOME_RADIUS / 2, 0, textureFloral, 'pictures/heightmap.png',
                   {debarked: materialLibrary.lambert.treeDebarked, barked: materialLibrary.lambert.treeBark,
-                   branch: materialLibrary.lambert.treeBark, foliage: materialLibrary.lambert.treeFoliage});
+                   branch: materialLibrary.lambert.treeBark, foliage: materialLibrary.lambert.treeFoliage},
+                  {house: materialLibrary.lambert.house, roof: materialLibrary.lambert.roof,
+                   door: materialLibrary.lambert.door});
     createMoon(MOON_OFFSET_X, MOON_OFFSET_Y, MOON_OFFSET_Z, materialLibrary.lambert.moon);
     createLight(MOON_OFFSET_X + MOON_RADIUS, MOON_OFFSET_Y, MOON_OFFSET_Z + MOON_RADIUS);
     createOvni(OVNI_OFFSET_X, OVNI_OFFSET_Y, OVNI_OFFSET_Z, {body: materialLibrary.lambert.ovniBody,
                cockpit: materialLibrary.lambert.ovniCockpit, base: materialLibrary.lambert.ovniBody});
-}
-
-function createLight (x, y, z) {
-    directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1);
-    directionalLight.position.set(x, y, z);
-    directionalLight.castShadow = true;
-
-    const lightMarkerGeometry = new THREE.SphereGeometry(0.5, 16, 16);
-    const lightMarkerMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 }); // amarelo
-    const lightMarker = new THREE.Mesh(lightMarkerGeometry, lightMarkerMaterial);
-
-    // Mesma posição da luz
-    lightMarker.position.copy(directionalLight.position);
-    scene.add(lightMarker);
-
-    const dirLightHelper = new THREE.DirectionalLightHelper(directionalLight, 5); // 5 = tamanho
-    scene.add(dirLightHelper);
-
-    directionalLight.lightOn = true;
-    scene.add(directionalLight);
-    // const ambientLight = new THREE.AmbientLight(0xffffff, 2.5); // TODO: mudar luzes dps -> escolher uma 
-    // scene.add(ambientLight);
 }
 
 //////////////////////
@@ -255,7 +242,7 @@ function setTopView() {
 function setFixedPerspectiveView() {
     // FIXME
     perspectiveCamera = new THREE.PerspectiveCamera(70, aspect, 1, 1000);
-    perspectiveCamera.position.set(100, 100, 100);
+    perspectiveCamera.position.set(80, 70, 80);
     perspectiveCamera.lookAt(scene.position);
     camera = perspectiveCamera;
 }
@@ -263,6 +250,27 @@ function setFixedPerspectiveView() {
 /////////////////////
 /* CREATE LIGHT(S) */
 /////////////////////
+function createLight(x, y, z) {
+    directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1);
+    directionalLight.position.set(x, y, z);
+    directionalLight.castShadow = true;
+
+    const lightMarkerGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+    const lightMarkerMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 }); // amarelo
+    const lightMarker = new THREE.Mesh(lightMarkerGeometry, lightMarkerMaterial);
+
+    // Mesma posição da luz
+    lightMarker.position.copy(directionalLight.position);
+    scene.add(lightMarker);
+
+    const dirLightHelper = new THREE.DirectionalLightHelper(directionalLight, 5); // 5 = tamanho
+    scene.add(dirLightHelper);
+
+    directionalLight.lightOn = true;
+    scene.add(directionalLight);
+    // const ambientLight = new THREE.AmbientLight(0xffffff, 2.5); // TODO: mudar luzes dps -> escolher uma 
+    // scene.add(ambientLight);
+}
 
 ////////////////////////
 /* CREATE OBJECT3D(S) */
@@ -340,7 +348,7 @@ function createMoon(x, y, z, material) {
     materialTargets.moon = moon;
 }
 
-function createTerrain(x, y, z, texture, heightmap, treeMaterials) {
+function createTerrain(x, y, z, texture, heightmap, treeMaterials, houseMaterials) {
     const geometry = new THREE.PlaneGeometry(PLANE_WIDTH, PLANE_HEIGHT, 64, 64);
 
     const terrainTexture = loader.load(heightmap);
@@ -369,7 +377,14 @@ function createTerrain(x, y, z, texture, heightmap, treeMaterials) {
         heightmapWidth = img.naturalWidth;
         heightmapHeight = img.naturalHeight;
         heightData = getHeightData(img, heightmapWidth, heightmapHeight);
-        scatterTrees(NUMBER_TREES, treeMaterials);
+        scatterTrees(treeMaterials);
+        // Refactor para isto não ter assim os valores das coordenadas
+        createHouse(
+            HOUSE_OFFSET_X,
+            getHeightAt(HOUSE_OFFSET_X, HOUSE_OFFSET_Z, heightData, heightmapWidth, heightmapHeight, PLANE_WIDTH, MAX_TERRAIN_HEIGHT) - SKYDOME_RADIUS / 2,
+            HOUSE_OFFSET_Z,
+            houseMaterials
+        );
     };
 }
 
@@ -382,6 +397,124 @@ function createSkydome(texture) {
     skydome = new THREE.Mesh(geometrySky, materialSky);
     skydome.position.set(0, -SKYDOME_RADIUS / 2, 0);
     scene.add(skydome);
+}
+
+function createHouse(x, y, z, materials) {
+    const house = new THREE.Group();
+    house.position.set(x, y, z);
+
+    // Main Wall (Front Face)
+    const frontWallGeometry = new THREE.BufferGeometry();
+
+    // Vertices for a flat rectangular front face
+    const frontVertices = new Float32Array([
+        -HOUSE_MAIN_WALL_LENGTH / 2, 0, HOUSE_MAIN_WALL_Z,                        // 0 bottom left
+         HOUSE_MAIN_WALL_LENGTH / 2, 0, HOUSE_MAIN_WALL_Z,                        // 1 bottom right
+         HOUSE_MAIN_WALL_LENGTH / 2, HOUSE_MAIN_WALL_HEIGHT, HOUSE_MAIN_WALL_Z,   // 2 top right
+        -HOUSE_MAIN_WALL_LENGTH / 2, HOUSE_MAIN_WALL_HEIGHT, HOUSE_MAIN_WALL_Z    // 3 top left
+    ]);
+
+    // Two triangles using vertex indices
+    const frontIndices = new Uint16Array([
+        0, 1, 2,
+        0, 2, 3
+    ]);
+
+    frontWallGeometry.setAttribute('position', new THREE.BufferAttribute(frontVertices, 3));
+    frontWallGeometry.setIndex(new THREE.BufferAttribute(frontIndices, 1));
+    frontWallGeometry.computeVertexNormals();
+
+    const frontWall = new THREE.Mesh(frontWallGeometry, materials.house);
+    house.add(frontWall);
+
+    // Side Wall (Right Face)
+    const sideGeometry = new THREE.BufferGeometry();
+    const sideVertices = new Float32Array([
+        HOUSE_SIDE_WALL_X, 0, HOUSE_MAIN_WALL_Z,                                  // 0 front bottom
+        HOUSE_SIDE_WALL_X, 0, -HOUSE_SIDE_WALL_LENGTH / 2,                        // 1 back bottom
+        HOUSE_SIDE_WALL_X, HOUSE_MAIN_WALL_HEIGHT, -HOUSE_MAIN_WALL_Z,            // 2 back top
+        HOUSE_SIDE_WALL_X, HOUSE_MAIN_WALL_HEIGHT, HOUSE_MAIN_WALL_Z              // 3 front top
+    ]);
+    const sideIndices = new Uint16Array([
+        0, 1, 2,
+        0, 2, 3
+    ]);
+
+    sideGeometry.setAttribute('position', new THREE.BufferAttribute(sideVertices, 3));
+    sideGeometry.setIndex(new THREE.BufferAttribute(sideIndices, 1));
+    sideGeometry.computeVertexNormals();
+
+    const sideWall = new THREE.Mesh(sideGeometry, materials.house); // reuse same material
+    house.add(sideWall);
+
+    // Roof (Pyramid Style)
+    const roofGeometry = new THREE.BufferGeometry();
+    const roofVertices = new Float32Array([
+        -HOUSE_MAIN_WALL_LENGTH / 2, HOUSE_MAIN_WALL_HEIGHT, -HOUSE_SIDE_WALL_LENGTH / 2,   // 0 back left
+         HOUSE_MAIN_WALL_LENGTH / 2, HOUSE_MAIN_WALL_HEIGHT, -HOUSE_SIDE_WALL_LENGTH / 2,   // 1 back right
+         HOUSE_MAIN_WALL_LENGTH / 2, HOUSE_MAIN_WALL_HEIGHT, HOUSE_MAIN_WALL_Z,             // 2 front right
+        -HOUSE_MAIN_WALL_LENGTH / 2, HOUSE_MAIN_WALL_HEIGHT, HOUSE_MAIN_WALL_Z,             // 3 front left
+         0, HOUSE_MAIN_WALL_HEIGHT + ROOF_HEIGHT, 0     // 4 top peak
+    ]);
+    const roofIndices = new Uint16Array([
+        0, 4, 1,
+        1, 4, 2,
+        2, 4, 3,
+        3, 4, 0
+    ]);
+
+    roofGeometry.setAttribute('position', new THREE.BufferAttribute(roofVertices, 3));
+    roofGeometry.setIndex(new THREE.BufferAttribute(roofIndices, 1));
+    roofGeometry.computeVertexNormals();
+
+    const roof = new THREE.Mesh(roofGeometry, materials.roof);
+    house.add(roof);
+
+    // Door (on Front Wall)
+    const doorGeometry = new THREE.BufferGeometry();
+    const doorVertices = new Float32Array([
+        -DOOR_LENGHT / 2, 0, HOUSE_MAIN_WALL_Z + 1.5*STRIPT_OFFSET,
+         DOOR_LENGHT / 2, 0, HOUSE_MAIN_WALL_Z + 1.5*STRIPT_OFFSET,
+         DOOR_LENGHT / 2, DOOR_HEIGHT, HOUSE_MAIN_WALL_Z + 1.5*STRIPT_OFFSET,
+        -DOOR_LENGHT / 2, DOOR_HEIGHT, HOUSE_MAIN_WALL_Z + 1.5*STRIPT_OFFSET
+    ]);
+    const doorIndices = new Uint16Array([
+        0, 1, 2,
+        0, 2, 3
+    ]);
+    doorGeometry.setAttribute('position', new THREE.BufferAttribute(doorVertices, 3));
+    doorGeometry.setIndex(new THREE.BufferAttribute(doorIndices, 1));
+    doorGeometry.computeVertexNormals();
+
+    const door = new THREE.Mesh(doorGeometry, materials.door);
+    house.add(door);
+
+    // Windows TODO
+
+    // Base Wall stripe (low border)
+    const stripeGeometry = new THREE.BufferGeometry();
+    const stripeVertices = new Float32Array([
+        -HOUSE_MAIN_WALL_LENGTH / 2, 0, HOUSE_MAIN_WALL_Z + STRIPT_OFFSET,
+         HOUSE_MAIN_WALL_LENGTH / 2, 0, HOUSE_MAIN_WALL_Z + STRIPT_OFFSET,
+         HOUSE_MAIN_WALL_LENGTH / 2, STRIPT_HEIGHT, HOUSE_MAIN_WALL_Z + STRIPT_OFFSET,
+        -HOUSE_MAIN_WALL_LENGTH / 2, STRIPT_HEIGHT, HOUSE_MAIN_WALL_Z + STRIPT_OFFSET
+    ]);
+    const stripeIndices = new Uint16Array([
+        0, 1, 2,
+        0, 2, 3
+    ]);
+    stripeGeometry.setAttribute('position', new THREE.BufferAttribute(stripeVertices, 3));
+    stripeGeometry.setIndex(new THREE.BufferAttribute(stripeIndices, 1));
+    stripeGeometry.computeVertexNormals();
+
+    const stripeMaterial = new THREE.MeshLambertMaterial({ color: 0x0099cc });
+    const baseStripe = new THREE.Mesh(stripeGeometry, stripeMaterial);
+    house.add(baseStripe);
+
+    // Left Wall stripe (low border)
+    // TODO
+
+    scene.add(house);
 }
 
 function getHeightData(img, width, height) {
@@ -479,7 +612,7 @@ function createTree(x, y, z, materials) {
     };
 }
 
-function scatterTrees(count, treeMaterials) {
+function scatterTrees(treeMaterials) {
 
     // Fixed x and z coordinates for the trees
     const positions = [
