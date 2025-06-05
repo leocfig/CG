@@ -149,10 +149,13 @@ function createScene() {
     createFieldTexture();
     createSkyTexture();
     createSkydome(textureSky);
-    createTerrain(0, -SKYDOME_RADIUS / 2, 0, textureFloral, 'pictures/heightmap.png');
-    createMoon(MOON_OFFSET_X, MOON_OFFSET_Y, MOON_OFFSET_Z);
+    createTerrain(0, -SKYDOME_RADIUS / 2, 0, textureFloral, 'pictures/heightmap.png',
+                  {debarked: materialLibrary.lambert.treeDebarked, barked: materialLibrary.lambert.treeBark,
+                   branch: materialLibrary.lambert.treeBark, foliage: materialLibrary.lambert.treeFoliage});
+    createMoon(MOON_OFFSET_X, MOON_OFFSET_Y, MOON_OFFSET_Z, materialLibrary.lambert.moon);
     createLight(MOON_OFFSET_X + MOON_RADIUS, MOON_OFFSET_Y, MOON_OFFSET_Z + MOON_RADIUS);
-    createOvni(OVNI_OFFSET_X, OVNI_OFFSET_Y, OVNI_OFFSET_Z);
+    createOvni(OVNI_OFFSET_X, OVNI_OFFSET_Y, OVNI_OFFSET_Z, {body: materialLibrary.lambert.ovniBody,
+               cockpit: materialLibrary.lambert.ovniCockpit, base: materialLibrary.lambert.ovniBody});
 }
 
 function createLight (x, y, z) {
@@ -310,9 +313,9 @@ function createSkyTexture() {
     textureSky.needsUpdate = true;
 }
 
-function createMoon(x, y, z) {
+function createMoon(x, y, z, material) {
     const geometry = new THREE.SphereGeometry(MOON_RADIUS, SEGMENTS, SEGMENTS);
-    moon = new THREE.Mesh(geometry, materialLibrary.lambert.moon); 
+    moon = new THREE.Mesh(geometry, material);
     moon.position.set(x, y, z);
     scene.add(moon);
 
@@ -320,7 +323,7 @@ function createMoon(x, y, z) {
     materialTargets.moon = moon;
 }
 
-function createTerrain(x, y, z, texture, heightmap) {
+function createTerrain(x, y, z, texture, heightmap, treeMaterials) {
     const geometry = new THREE.PlaneGeometry(PLANE_WIDTH, PLANE_HEIGHT, 64, 64);
 
     const terrainTexture = loader.load(heightmap);
@@ -349,7 +352,7 @@ function createTerrain(x, y, z, texture, heightmap) {
         heightmapWidth = img.naturalWidth;
         heightmapHeight = img.naturalHeight;
         heightData = getHeightData(img, heightmapWidth, heightmapHeight);
-        scatterTrees(NUMBER_TREES);
+        scatterTrees(NUMBER_TREES, treeMaterials);
     };
 }
 
@@ -404,18 +407,18 @@ function getHeightAt(x, z, heightData, heightmapWidth, heightmapHeight, planeSiz
     return height * maxHeight;
 }
 
-function createTree(x, y, z) {
+function createTree(x, y, z, materials) {
     const tree = new THREE.Group();
 
     const trunkGroup = new THREE.Group();
 
     const debarkedGeometry = new THREE.CylinderGeometry(TRUNK_RADIUS * 0.8, TRUNK_RADIUS * 0.8, DEBARKED_HEIGHT);
-    const debarked = new THREE.Mesh(debarkedGeometry, materialLibrary.lambert.treeDebarked);
+    const debarked = new THREE.Mesh(debarkedGeometry, materials.debarked);
     debarked.position.y = DEBARKED_HEIGHT / 2;
     trunkGroup.add(debarked);
 
     const barkedGeometry = new THREE.CylinderGeometry(TRUNK_RADIUS, TRUNK_RADIUS, BARKED_HEIGHT);
-    const barked = new THREE.Mesh(barkedGeometry, materialLibrary.lambert.treeBark);
+    const barked = new THREE.Mesh(barkedGeometry, materials.barked);
     barked.position.y = DEBARKED_HEIGHT + BARKED_HEIGHT / 2;
     trunkGroup.add(barked);
 
@@ -428,19 +431,19 @@ function createTree(x, y, z) {
     const branchY = (Math.cos(tilt) * BRANCH_HEIGHT + Math.cos(-tilt) * TREE_HEIGHT) / 2;
 
     const branchGeometry = new THREE.CylinderGeometry(BRANCH_RADIUS, BRANCH_RADIUS, BRANCH_HEIGHT);
-    const branch = new THREE.Mesh(branchGeometry, materialLibrary.lambert.treeBark);
+    const branch = new THREE.Mesh(branchGeometry, materials.branch);
     branch.position.set(0, branchY, 0);
     branch.rotation.z = tilt;     // opposite tilt
     tree.add(branch);
 
     // Canopy
-    const foliage1 = new THREE.Mesh(new THREE.SphereGeometry(FOLIAGE_RADIUS), materialLibrary.lambert.treeFoliage);
+    const foliage1 = new THREE.Mesh(new THREE.SphereGeometry(FOLIAGE_RADIUS), materials.foliage);
     foliage1.scale.set(1.2, 0.8, 1.0);  // flatten in y
     foliage1.position.set(-Math.sin(trunkGroup.rotation.z) * TREE_HEIGHT, foliageY, 0);
     tree.add(foliage1);
 
     // Additional canopy ellipsoid
-    const foliage2 = new THREE.Mesh(new THREE.SphereGeometry(FOLIAGE_RADIUS *0.8), materialLibrary.lambert.treeFoliage);
+    const foliage2 = new THREE.Mesh(new THREE.SphereGeometry(FOLIAGE_RADIUS *0.8), materials.foliage);
     foliage2.scale.set(1.1, 0.7, 1.0);  // flatten in y
     foliage2.position.set(-Math.sin(branch.rotation.z), foliageY * 0.9, 0);
     tree.add(foliage2);
@@ -459,7 +462,7 @@ function createTree(x, y, z) {
     };
 }
 
-function scatterTrees(count) {
+function scatterTrees(count, treeMaterials) {
 
     // Fixed x and z coordinates for the trees
     const positions = [
@@ -476,30 +479,30 @@ function scatterTrees(count) {
     const treeMeshes = [];
     for (const pos of positions) {
         const y = getHeightAt(pos.x, pos.z, heightData, heightmapWidth, heightmapHeight, PLANE_WIDTH, MAX_TERRAIN_HEIGHT);
-        const meshes = createTree(pos.x, y - SKYDOME_RADIUS / 2, pos.z);
+        const meshes = createTree(pos.x, y - SKYDOME_RADIUS / 2, pos.z, treeMaterials);
         treeMeshes.push(meshes);
     }
     materialTargets.trees = treeMeshes;
 }
 
-function createOvni(x, y, z) {
+function createOvni(x, y, z, materials) {
     ovni = new THREE.Group();
     
     // Body 
     const bodyGeometry = new THREE.SphereGeometry(OVNI_RADIUS, SEGMENTS, SEGMENTS);
     bodyGeometry.scale(1, OVNI_SCALE_Y, 1); // flatten in y
-    const body = new THREE.Mesh(bodyGeometry, materialLibrary.lambert.ovniBody);
+    const body = new THREE.Mesh(bodyGeometry, materials.body);
     ovni.add(body);
 
     // Cockpit ovni
     const cockpitGeometry = new THREE.SphereGeometry(OVNI_COCKPIT_RADIUS, SEGMENTS, SEGMENTS, 0, Math.PI * 2, 0, Math.PI / 2);
-    const cockpit = new THREE.Mesh(cockpitGeometry, materialLibrary.lambert.ovniCockpit);
+    const cockpit = new THREE.Mesh(cockpitGeometry, materials.cockpit);
     cockpit.position.y = OVNI_HEIGHT / 2 ;
     ovni.add(cockpit);
 
     // Spotlight
     const baseGeometry = new THREE.CylinderGeometry(OVNI_COCKPIT_RADIUS, OVNI_COCKPIT_RADIUS, OVNI_BASE_HEIGHT, SEGMENTS);
-    const base = new THREE.Mesh(baseGeometry, materialLibrary.lambert.ovniBody);
+    const base = new THREE.Mesh(baseGeometry, materials.base);
     base.position.y = - OVNI_HEIGHT / 2;
     ovni.add(base);
 
