@@ -59,6 +59,9 @@ const MAX_TERRAIN_HEIGHT = 25;
 
 // Ovni
 const OVNI_RADIUS = 8;
+const OVNI_OFFSET_X = 0;
+const OVNI_OFFSET_Y = 0;
+const OVNI_OFFSET_Z = 0;
 const OVNI_SCALE_Y = 0.3;
 const OVNI_HEIGHT = OVNI_SCALE_Y * OVNI_RADIUS;
 const OVNI_COCKPIT_RADIUS = OVNI_RADIUS / 2;
@@ -75,26 +78,45 @@ const MAX_OVNI_RADIUS = Math.sqrt(SKYDOME_RADIUS*SKYDOME_RADIUS - SKYDOME_RADIUS
 
 const loader = new THREE.TextureLoader();
 const aspect = window.innerWidth / window.innerHeight;
-const size = 70;
+const size = 150;
 let scene, renderer, textureFloral, textureSky, skydome, moon, directionalLight, ovni;
 
 const materialLibrary = {
     lambert: {
-        moon: new THREE.MeshLambertMaterial({ color: 0xFFFFFF, emissive: 0x222222 }),
+        moon: new THREE.MeshLambertMaterial({ color: 0xFFFFFF, emissive: 0x444444 }),
         ovniBody: new THREE.MeshLambertMaterial({ color: 0xbf0453, emissive: 0x222222 }),
-        ovniCockpit: new THREE.MeshLambertMaterial({ color: 0xfae1fd, emissive: 0x222222 }),
+        ovniCockpit: new THREE.MeshLambertMaterial({
+            color: 0x88ccff,
+            transparent: true,
+            opacity: 0.7,
+            emissive: 0x222222,
+            side: THREE.DoubleSide
+        }),
         ovniLights: new THREE.MeshLambertMaterial({ color: 0xFFFFAA, emissive: 0xFFFFAA }),
     },
     phong: {
         moon: new THREE.MeshPhongMaterial({ color: 0xFFFFFF, shininess: 100, emissive: 0x222222 }),
         ovniBody: new THREE.MeshPhongMaterial({ color: 0xbf0453, shininess: 100, emissive: 0x222222 }),
-        ovniCockpit: new THREE.MeshPhongMaterial({ color: 0xfae1fd, shininess: 100, emissive: 0x222222 }),
+        ovniCockpit: new THREE.MeshPhongMaterial({
+            color: 0x88ccff,
+            shininess: 5,
+            emissive: 0x222222,
+            transparent: true,
+            opacity: 0.7,
+            specular: 0xffffaa,
+            side: THREE.DoubleSide
+        }),
         ovniLights: new THREE.MeshPhongMaterial({ color: 0xFFFFAA, shininess: 100, emissive: 0xFFFFAA }),
     },
     toon: {
         moon: new THREE.MeshToonMaterial({ color: 0xFFFFFF }),
         ovniBody: new THREE.MeshToonMaterial({ color: 0xbf0453 }),
-        ovniCockpit: new THREE.MeshToonMaterial({ color: 0xfae1fd }),
+        ovniCockpit: new THREE.MeshToonMaterial({
+            color: 0x88ccff,
+            transparent: true,
+            opacity: 0.7,
+            side: THREE.DoubleSide
+        }),
         ovniLights: new THREE.MeshToonMaterial({ color: 0xFFFFAA, emissive: 0xFFFFAA }),
     }
 };
@@ -118,15 +140,28 @@ function createScene() {
     createFieldTexture();
     createSkyTexture();
     createSkydome(textureSky);
-    createTerrain(0,  -SKYDOME_RADIUS / 2, 0, textureFloral, 'pictures/heightmap.png');
-    createMoon();
-    createLight();
-    createOvni(0, 0, 0)
+    createTerrain(0, -SKYDOME_RADIUS / 2, 0, textureFloral, 'pictures/heightmap.png');
+    createMoon(MOON_OFFSET_X, MOON_OFFSET_Y, MOON_OFFSET_Z);
+    createLight(MOON_OFFSET_X + MOON_RADIUS, MOON_OFFSET_Y, MOON_OFFSET_Z + MOON_RADIUS);
+    createOvni(OVNI_OFFSET_X, OVNI_OFFSET_Y, OVNI_OFFSET_Z);
 }
 
-function createLight (){
+function createLight (x, y, z) {
     directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1);
-    directionalLight.position.set(50, 30, 80);
+    directionalLight.position.set(x, y, z);
+    directionalLight.castShadow = true;
+
+    const lightMarkerGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+    const lightMarkerMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 }); // amarelo
+    const lightMarker = new THREE.Mesh(lightMarkerGeometry, lightMarkerMaterial);
+
+    // Mesma posição da luz
+    lightMarker.position.copy(directionalLight.position);
+    scene.add(lightMarker);
+
+    const dirLightHelper = new THREE.DirectionalLightHelper(directionalLight, 5); // 5 = tamanho
+    scene.add(dirLightHelper);
+
     directionalLight.lightOn = true;
     scene.add(directionalLight);
     // const ambientLight = new THREE.AmbientLight(0xffffff, 2.5); // TODO: mudar luzes dps -> escolher uma 
@@ -266,10 +301,10 @@ function createSkyTexture() {
     textureSky.needsUpdate = true;
 }
 
-function createMoon() {
+function createMoon(x, y, z) {
     const geometry = new THREE.SphereGeometry(MOON_RADIUS, SEGMENTS, SEGMENTS);
     moon = new THREE.Mesh(geometry, materialLibrary.lambert.moon); 
-    moon.position.set(MOON_OFFSET_X, MOON_OFFSET_Y, MOON_OFFSET_Z);
+    moon.position.set(x, y, z);
     scene.add(moon);
 
     // Register to global target
@@ -277,7 +312,6 @@ function createMoon() {
 }
 
 function createTerrain(x, y, z, texture, heightmap) {
-    //const geometry = new THREE.CircleGeometry(SKYDOME_RADIUS, SEGMENTS)
     const geometry = new THREE.PlaneGeometry(PLANE_WIDTH, PLANE_HEIGHT, 64, 64);
 
     const terrainTexture = loader.load(heightmap);
@@ -314,7 +348,7 @@ function createSkydome(texture) {
     const geometrySky = new THREE.SphereGeometry(SKYDOME_RADIUS, SEGMENTS, SEGMENTS, 0, Math.PI * 2, 0, Math.PI / 2);
     const materialSky = new THREE.MeshBasicMaterial({
         map: texture,
-        side: THREE.BackSide // <- isto é importante para vermos por dentro
+        side: THREE.BackSide // <- isto é importante para vermos por dentro, depois tirar quando estivermos lá dentro?
     });
     skydome = new THREE.Mesh(geometrySky, materialSky);
     skydome.position.set(0, -SKYDOME_RADIUS / 2, 0);
@@ -340,10 +374,9 @@ function getHeightData(img, width, height) {
             const g = imageData[index + 1];
             const b = imageData[index + 2];
             const brightness = (r + g + b) / 3;
-            data[i++] = brightness / 255; // normalizado entre 0 e 1
+            data[i++] = brightness / 255; // normalized between 0 and 1
         }
     }
-
     return data;
 }
 
@@ -357,7 +390,7 @@ function getHeightAt(x, z, heightData, heightmapWidth, heightmapHeight, planeSiz
     const clampedZ = Math.max(0, Math.min(heightmapHeight - 1, imgZ));
 
     const index = clampedZ * heightmapWidth + clampedX;
-    const height = heightData[index]; // entre 0 e 1
+    const height = heightData[index]; // between 0 and 1
 
     return height * maxHeight;
 }
@@ -397,13 +430,13 @@ function createTree(x, y, z) {
     const foliageMaterial = new THREE.MeshStandardMaterial({ color: '#0f3d0f' }); // Dark green
 
     const foliage1 = new THREE.Mesh(new THREE.SphereGeometry(FOLIAGE_RADIUS), foliageMaterial);
-    foliage1.scale.set(1.2, 0.8, 1.0);
+    foliage1.scale.set(1.2, 0.8, 1.0);  // flatten in y
     foliage1.position.set(-Math.sin(trunkGroup.rotation.z) * TREE_HEIGHT, foliageY, 0);
     tree.add(foliage1);
 
     // Additional canopy ellipsoid
     const foliage2 = new THREE.Mesh(new THREE.SphereGeometry(FOLIAGE_RADIUS *0.8), foliageMaterial);
-    foliage2.scale.set(1.1, 0.7, 1.0);
+    foliage2.scale.set(1.1, 0.7, 1.0);  // flatten in y
     foliage2.position.set(-Math.sin(branch.rotation.z), foliageY * 0.9, 0);
     tree.add(foliage2);
 
@@ -432,14 +465,12 @@ function scatterTrees(count) {
     }
 }
 
-function createOvni(x, y, z){
+function createOvni(x, y, z) {
     ovni = new THREE.Group();
-    scene.add(ovni);
-    console.log(ovni.position)
     
     // Body 
     const bodyGeometry = new THREE.SphereGeometry(OVNI_RADIUS, SEGMENTS, SEGMENTS);
-    bodyGeometry.scale(1, OVNI_SCALE_Y, 1); // achatar em Y
+    bodyGeometry.scale(1, OVNI_SCALE_Y, 1); // flatten in y
     const body = new THREE.Mesh(bodyGeometry, materialLibrary.lambert.ovniBody);
     ovni.add(body);
 
@@ -462,8 +493,11 @@ function createOvni(x, y, z){
         base: base
     }
 
+    ovni.position.set(x, y, z);
+    scene.add(ovni);
+
     // Small lights and center spotlight
-    ovni.pointLights = createOvniLights(body);
+    ovni.pointLights = createOvniLights(-OVNI_HEIGHT * 0.65, body);
     // Create a spotlight to shine down from the base
     const spotlight = new THREE.SpotLight(0xffffff, 5, SKYDOME_RADIUS / 2, Math.PI / 6, 0.5, 0);
     spotlight.position.set(0, -OVNI_BASE_HEIGHT/2, 0);
@@ -486,10 +520,6 @@ function createOvni(x, y, z){
     // base.castShadow = true;
     // base.receiveShadow = true;
 
-    // Optional: make the spotlight visible with a helper (for debugging)
-    // const helper = new THREE.SpotLightHelper(spotlight);
-    // base.add(helper);
-
     ovni.lightsOn = true;
     ovni.movementVector = {
         ArrowUp: false,
@@ -499,7 +529,7 @@ function createOvni(x, y, z){
     };
 }
 
-function createOvniLights(ovniBody){
+function createOvniLights(y, ovniBody) {
     const pointLights = [];
     const bulbMeshes = [];
 
@@ -510,7 +540,7 @@ function createOvniLights(ovniBody){
         
         const geometry = new THREE.SphereGeometry(0.5, 16, 16);
         const bulb = new THREE.Mesh(geometry, materialLibrary.lambert.ovniLights);
-        bulb.position.set(x, - OVNI_HEIGHT * 0.65, z);
+        bulb.position.set(x, y, z);
         ovniBody.add(bulb);
         bulbMeshes.push(bulb);
 
