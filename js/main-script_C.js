@@ -93,6 +93,9 @@ const materialLibrary = {
             side: THREE.DoubleSide
         }),
         ovniLights: new THREE.MeshLambertMaterial({ color: 0xFFFFAA, emissive: 0xFFFFAA }),
+        treeBark: new THREE.MeshLambertMaterial({ color: 0xa64500 }),
+        treeDebarked: new THREE.MeshLambertMaterial({ color: 0x5e3c1a }),
+        treeFoliage: new THREE.MeshLambertMaterial({ color: 0X0f3d0f }),
     },
     phong: {
         moon: new THREE.MeshPhongMaterial({ color: 0xFFFFFF, shininess: 100, emissive: 0x222222 }),
@@ -107,6 +110,9 @@ const materialLibrary = {
             side: THREE.DoubleSide
         }),
         ovniLights: new THREE.MeshPhongMaterial({ color: 0xFFFFAA, shininess: 100, emissive: 0xFFFFAA }),
+        treeBark: new THREE.MeshPhongMaterial({ color: 0xa64500 }),
+        treeDebarked: new THREE.MeshPhongMaterial({ color: 0x5e3c1a }),
+        treeFoliage: new THREE.MeshPhongMaterial({ color: 0X0f3d0f }),
     },
     toon: {
         moon: new THREE.MeshToonMaterial({ color: 0xFFFFFF }),
@@ -118,6 +124,9 @@ const materialLibrary = {
             side: THREE.DoubleSide
         }),
         ovniLights: new THREE.MeshToonMaterial({ color: 0xFFFFAA, emissive: 0xFFFFAA }),
+        treeBark: new THREE.MeshToonMaterial({ color: 0xa64500 }),
+        treeDebarked: new THREE.MeshToonMaterial({ color: 0x5e3c1a }),
+        treeFoliage: new THREE.MeshToonMaterial({ color: 0X0f3d0f }),
     }
 };
 
@@ -401,14 +410,12 @@ function createTree(x, y, z) {
     const trunkGroup = new THREE.Group();
 
     const debarkedGeometry = new THREE.CylinderGeometry(TRUNK_RADIUS * 0.8, TRUNK_RADIUS * 0.8, DEBARKED_HEIGHT);
-    const debarkedMaterial = new THREE.MeshStandardMaterial({ color: '#a64500' }); // Dark-orange
-    const debarked = new THREE.Mesh(debarkedGeometry, debarkedMaterial);
+    const debarked = new THREE.Mesh(debarkedGeometry, materialLibrary.lambert.treeDebarked);
     debarked.position.y = DEBARKED_HEIGHT / 2;
     trunkGroup.add(debarked);
 
     const barkedGeometry = new THREE.CylinderGeometry(TRUNK_RADIUS, TRUNK_RADIUS, BARKED_HEIGHT);
-    const barkedMaterial = new THREE.MeshStandardMaterial({ color: '#5e3c1a' }); // Dark brown
-    const barked = new THREE.Mesh(barkedGeometry, barkedMaterial);
+    const barked = new THREE.Mesh(barkedGeometry, materialLibrary.lambert.treeBark);
     barked.position.y = DEBARKED_HEIGHT + BARKED_HEIGHT / 2;
     trunkGroup.add(barked);
 
@@ -421,21 +428,19 @@ function createTree(x, y, z) {
     const branchY = (Math.cos(tilt) * BRANCH_HEIGHT + Math.cos(-tilt) * TREE_HEIGHT) / 2;
 
     const branchGeometry = new THREE.CylinderGeometry(BRANCH_RADIUS, BRANCH_RADIUS, BRANCH_HEIGHT);
-    const branch = new THREE.Mesh(branchGeometry, barkedMaterial);
+    const branch = new THREE.Mesh(branchGeometry, materialLibrary.lambert.treeBark);
     branch.position.set(0, branchY, 0);
     branch.rotation.z = tilt;     // opposite tilt
     tree.add(branch);
 
     // Canopy
-    const foliageMaterial = new THREE.MeshStandardMaterial({ color: '#0f3d0f' }); // Dark green
-
-    const foliage1 = new THREE.Mesh(new THREE.SphereGeometry(FOLIAGE_RADIUS), foliageMaterial);
+    const foliage1 = new THREE.Mesh(new THREE.SphereGeometry(FOLIAGE_RADIUS), materialLibrary.lambert.treeFoliage);
     foliage1.scale.set(1.2, 0.8, 1.0);  // flatten in y
     foliage1.position.set(-Math.sin(trunkGroup.rotation.z) * TREE_HEIGHT, foliageY, 0);
     tree.add(foliage1);
 
     // Additional canopy ellipsoid
-    const foliage2 = new THREE.Mesh(new THREE.SphereGeometry(FOLIAGE_RADIUS *0.8), foliageMaterial);
+    const foliage2 = new THREE.Mesh(new THREE.SphereGeometry(FOLIAGE_RADIUS *0.8), materialLibrary.lambert.treeFoliage);
     foliage2.scale.set(1.1, 0.7, 1.0);  // flatten in y
     foliage2.position.set(-Math.sin(branch.rotation.z), foliageY * 0.9, 0);
     tree.add(foliage2);
@@ -443,6 +448,15 @@ function createTree(x, y, z) {
     tree.position.set(x, y, z);
     tree.receiveShadow = true;
     scene.add(tree);
+
+    // return the tree meshes
+    return {
+        debarked,
+        barked,
+        branch,
+        foliage1,
+        foliage2,
+    };
 }
 
 function scatterTrees(count) {
@@ -459,10 +473,13 @@ function scatterTrees(count) {
         { x: 85, z: -80 }
     ];
 
+    const treeMeshes = [];
     for (const pos of positions) {
         const y = getHeightAt(pos.x, pos.z, heightData, heightmapWidth, heightmapHeight, PLANE_WIDTH, MAX_TERRAIN_HEIGHT);
-        createTree(pos.x, y - SKYDOME_RADIUS / 2, pos.z);
+        const meshes = createTree(pos.x, y - SKYDOME_RADIUS / 2, pos.z);
+        treeMeshes.push(meshes);
     }
+    materialTargets.trees = treeMeshes;
 }
 
 function createOvni(x, y, z) {
@@ -623,6 +640,17 @@ function switchMaterial(type) {
         ovniParts.cockpit.material = materials.ovniCockpit;
         ovniParts.lights.forEach(mesh => {
             mesh.material = materials.ovniLights;
+        });
+    }
+
+    // Apply to trees
+    if (materialTargets.trees) {
+        materialTargets.trees.forEach(tree => {
+            tree.debarked.material = materials.treeDebarked;
+            tree.barked.material = materials.treeBark;
+            tree.branch.material = materials.treeBark;
+            tree.foliage1.material = materials.treeFoliage;
+            tree.foliage2.material = materials.treeFoliage;
         });
     }
 }
