@@ -212,7 +212,6 @@ function createCamera() {
         size, -size,
         1, 1000
     );
-    //perspectiveCamera = new THREE.PerspectiveCamera(70, aspect, 1, 1000);
 
     setFixedPerspectiveView();
 }
@@ -257,8 +256,7 @@ function setTopView() {
 }
 
 function setFixedPerspectiveView() {
-    // FIXME
-    perspectiveCamera = new THREE.PerspectiveCamera(70, aspect, 1, 1000);
+    if (!perspectiveCamera) perspectiveCamera = new THREE.PerspectiveCamera(70, aspect, 1, 1000);
     perspectiveCamera.position.set(80, 70, 80);
     perspectiveCamera.lookAt(scene.position);
     camera = perspectiveCamera;
@@ -915,7 +913,6 @@ function switchMaterial(type) {
     // Apply to house
     const house = materialTargets.house;
     if (house) {
-        console.log("entrou")
         house.frontWall.material = materials.house;
         house.sideWall.material = materials.house;
         house.roof.material = materials.roof;
@@ -1009,6 +1006,7 @@ function onKeyDown(e) {
                 disableVRmode();
                 setFixedPerspectiveView();
             }
+            setFixedPerspectiveView();      // TODO: remover antes de entregar, é só para funcionar com as camaras ortogonais
             break;
         case '8': // vai ser para tirar
             setFrontView();
