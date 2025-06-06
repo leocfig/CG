@@ -60,7 +60,7 @@ const STRIPT_OFFSET = 0.05; // to avoid z-fighting
 const MOON_RADIUS = 10;
 const MOON_OFFSET_X = - SKYDOME_RADIUS * 0.4;
 const MOON_OFFSET_Y = -SKYDOME_RADIUS / 2 + SKYDOME_RADIUS * 0.65;
-const MOON_OFFSET_Z = - SKYDOME_RADIUS / 2 ;
+const MOON_OFFSET_Z = SKYDOME_RADIUS / 2 ;
 
 // Terrain
 //const PLANE_WIDTH = window.innerWidth / 4;
