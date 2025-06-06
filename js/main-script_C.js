@@ -6,7 +6,6 @@ import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 
 // DÚVIDAS
 
-// Que câmara é colocada como default?
 // Ter as posições das árvores num array dentro da função de ScatterTrees?
 
 ///////////////
@@ -52,6 +51,8 @@ const HOUSE_SIDE_WALL_X = HOUSE_MAIN_WALL_LENGTH / 2;
 const ROOF_HEIGHT = 10;
 const DOOR_HEIGHT = 10;
 const DOOR_LENGHT = 5;
+const WINDOW_HEIGHT = 5;
+const WINDOW_LENGHT = 4;
 const STRIPT_HEIGHT = 3;
 const STRIPT_OFFSET = 0.05; // to avoid z-fighting
 
@@ -489,7 +490,42 @@ function createHouse(x, y, z, materials) {
     const door = new THREE.Mesh(doorGeometry, materials.door);
     house.add(door);
 
-    // Windows TODO
+    // Windows
+    const rightWindowGeometry = new THREE.BufferGeometry();
+    const rightWindowVertices = new Float32Array([
+        -WINDOW_LENGHT / 2 - HOUSE_MAIN_WALL_LENGTH / 3, HOUSE_MAIN_WALL_HEIGHT / 3, HOUSE_MAIN_WALL_Z + 1.5*STRIPT_OFFSET,
+         WINDOW_LENGHT / 2 - HOUSE_MAIN_WALL_LENGTH / 3, HOUSE_MAIN_WALL_HEIGHT / 3, HOUSE_MAIN_WALL_Z + 1.5*STRIPT_OFFSET,
+         WINDOW_LENGHT / 2 - HOUSE_MAIN_WALL_LENGTH / 3, HOUSE_MAIN_WALL_HEIGHT / 3 + WINDOW_HEIGHT, HOUSE_MAIN_WALL_Z + 1.5*STRIPT_OFFSET,
+        -WINDOW_LENGHT / 2 - HOUSE_MAIN_WALL_LENGTH / 3, HOUSE_MAIN_WALL_HEIGHT / 3 + WINDOW_HEIGHT, HOUSE_MAIN_WALL_Z + 1.5*STRIPT_OFFSET
+    ]);
+    const rightWindowIndices = new Uint16Array([
+        0, 1, 2,
+        0, 2, 3
+    ]);
+    rightWindowGeometry.setAttribute('position', new THREE.BufferAttribute(rightWindowVertices, 3));
+    rightWindowGeometry.setIndex(new THREE.BufferAttribute(rightWindowIndices, 1));
+    rightWindowGeometry.computeVertexNormals();
+
+    const rightWindow = new THREE.Mesh(rightWindowGeometry, materials.door);
+    house.add(rightWindow);
+
+    const leftWindowGeometry = new THREE.BufferGeometry();
+    const leftWindowVertices = new Float32Array([
+        -WINDOW_LENGHT / 2 + HOUSE_MAIN_WALL_LENGTH / 3, HOUSE_MAIN_WALL_HEIGHT / 3, HOUSE_MAIN_WALL_Z + 1.5*STRIPT_OFFSET,
+         WINDOW_LENGHT / 2 + HOUSE_MAIN_WALL_LENGTH / 3, HOUSE_MAIN_WALL_HEIGHT / 3, HOUSE_MAIN_WALL_Z + 1.5*STRIPT_OFFSET,
+         WINDOW_LENGHT / 2 + HOUSE_MAIN_WALL_LENGTH / 3, HOUSE_MAIN_WALL_HEIGHT / 3 + WINDOW_HEIGHT, HOUSE_MAIN_WALL_Z + 1.5*STRIPT_OFFSET,
+        -WINDOW_LENGHT / 2 + HOUSE_MAIN_WALL_LENGTH / 3, HOUSE_MAIN_WALL_HEIGHT / 3 + WINDOW_HEIGHT, HOUSE_MAIN_WALL_Z + 1.5*STRIPT_OFFSET
+    ]);
+    const leftWindowIndices = new Uint16Array([
+        0, 1, 2,
+        0, 2, 3
+    ]);
+    leftWindowGeometry.setAttribute('position', new THREE.BufferAttribute(leftWindowVertices, 3));
+    leftWindowGeometry.setIndex(new THREE.BufferAttribute(leftWindowIndices, 1));
+    leftWindowGeometry.computeVertexNormals();
+
+    const leftWindow = new THREE.Mesh(leftWindowGeometry, materials.door);
+    house.add(leftWindow);
 
     // Base Wall stripe (low border)
     const stripeGeometry = new THREE.BufferGeometry();
