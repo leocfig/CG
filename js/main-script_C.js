@@ -179,8 +179,7 @@ const materialTargets = {};
 let camera, orthoCamera, perspectiveCamera;
 let heightData, img;
 let heightmapWidth, heightmapHeight;
-let currentMaterial;
-let calculateLighting;
+let generateTexture, currentMaterial, calculateLighting;
 const clock = new THREE.Clock();
 
 /////////////////////
@@ -819,12 +818,27 @@ function createOvniLights(y, ovniBody) {
 
 function update() {
     const delta = clock.getDelta();
+    updateTextures();
     updateOvni(delta);
     updateLights([directionalLight], directionalLight.lightOn);
     updateLights(ovni.pointLights, ovni.lightsOn);
     updateLights([ovni.spotLight], ovni.lightsOn);
     if (calculateLighting) switchMaterial(currentMaterial);
     else switchMaterial("basic");
+}
+
+function updateTextures() {
+    switch (generateTexture) {
+        case "floral":
+            createFieldTexture(textureFloral);
+            break;
+        case "sky":
+            createSkyTexture(textureSky);
+            break;
+        default:
+            break;
+    }
+    generateTexture = "";
 }
 
 function updateLights(lights, lightsOn) {
@@ -984,10 +998,10 @@ function onResize() {
 function onKeyDown(e) {
     switch(e.key) {
         case '1':
-            createFieldTexture(textureFloral);
+            generateTexture = "floral";
             break;
         case '2':
-            createSkyTexture(textureSky);
+            generateTexture = "sky";
             break;
         case '7':
             // Only disable VR mode if the user is currently in a VR session 
