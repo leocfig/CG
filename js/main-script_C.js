@@ -867,10 +867,10 @@ function update() {
 function updateTextures() {
     switch (generateTexture) {
         case "floral":
-            createFieldTexture(textureFloral);
+            generateFieldTexture(textureFloral);
             break;
         case "sky":
-            createSkyTexture(textureSky);
+            generateSkyTexture(textureSky);
             break;
         default:
             break;
