@@ -106,12 +106,12 @@ const materialLibrary = {
             side: THREE.DoubleSide
         }),
         ovniLights: new THREE.MeshLambertMaterial({ color: 0xFFFFAA, emissive: 0xFFFFAA }),
-        treeBark: new THREE.MeshLambertMaterial({ color: 0xa64500 }),
-        treeDebarked: new THREE.MeshLambertMaterial({ color: 0x5e3c1a }),
+        treeBark: new THREE.MeshLambertMaterial({ color: 0x5e3c1a }),
+        treeDebarked: new THREE.MeshLambertMaterial({ color: 0xa64500 }),
         treeFoliage: new THREE.MeshLambertMaterial({ color: 0X0f3d0f }),
         house: new THREE.MeshLambertMaterial({ color: 0xffffff }),
-        roof: new THREE.MeshLambertMaterial({ color: 0xff6600 }),
-        door: new THREE.MeshLambertMaterial({ color: 0x8B0000 })
+        roof: new THREE.MeshLambertMaterial({ color: 0xA24C00 }),
+        door: new THREE.MeshLambertMaterial({ color: 0x8B0000 }),
     },
     phong: {
         moon: new THREE.MeshPhongMaterial({ color: 0xFFFFFF, shininess: 100, emissive: 0x444444 }),
@@ -126,11 +126,11 @@ const materialLibrary = {
             side: THREE.DoubleSide
         }),
         ovniLights: new THREE.MeshPhongMaterial({ color: 0xFFFFAA, shininess: 100, emissive: 0xFFFFAA }),
-        treeBark: new THREE.MeshPhongMaterial({ color: 0xa64500 }),
-        treeDebarked: new THREE.MeshPhongMaterial({ color: 0x5e3c1a }),
+        treeBark: new THREE.MeshPhongMaterial({ color: 0x5e3c1a }),
+        treeDebarked: new THREE.MeshPhongMaterial({ color: 0xa64500 }),
         treeFoliage: new THREE.MeshPhongMaterial({ color: 0X0f3d0f }),
         house: new THREE.MeshPhongMaterial({ color: 0xffffff }),
-        roof: new THREE.MeshPhongMaterial({ color: 0xff6600 }),
+        roof: new THREE.MeshPhongMaterial({ color: 0xA24C00 }),
         door: new THREE.MeshPhongMaterial({ color: 0x8B0000 })
     },
     toon: {
@@ -144,11 +144,11 @@ const materialLibrary = {
             side: THREE.DoubleSide
         }),
         ovniLights: new THREE.MeshToonMaterial({ color: 0xFFFFAA, emissive: 0xFFFFAA }),
-        treeBark: new THREE.MeshToonMaterial({ color: 0xa64500 }),
-        treeDebarked: new THREE.MeshToonMaterial({ color: 0x5e3c1a }),
+        treeBark: new THREE.MeshToonMaterial({ color: 0x5e3c1a }),
+        treeDebarked: new THREE.MeshToonMaterial({ color: 0xa64500 }),
         treeFoliage: new THREE.MeshToonMaterial({ color: 0X0f3d0f }),
         house: new THREE.MeshToonMaterial({ color: 0xffffff }),
-        roof: new THREE.MeshToonMaterial({ color: 0xff6600 }),
+        roof: new THREE.MeshToonMaterial({ color: 0xA24C00 }),
         door: new THREE.MeshToonMaterial({ color: 0x8B0000 })
     }
 };
@@ -520,27 +520,43 @@ function createHouse(x, y, z, materials) {
     house.add(leftWindow);
 
     // Base Wall stripe (low border)
-    const stripeGeometry = new THREE.BufferGeometry();
-    const stripeVertices = new Float32Array([
+    const baseStripeGeometry = new THREE.BufferGeometry();
+    const baseStripeVertices = new Float32Array([
         -HOUSE_MAIN_WALL_LENGTH / 2, 0, HOUSE_MAIN_WALL_Z + STRIPT_OFFSET,
          HOUSE_MAIN_WALL_LENGTH / 2, 0, HOUSE_MAIN_WALL_Z + STRIPT_OFFSET,
          HOUSE_MAIN_WALL_LENGTH / 2, STRIPT_HEIGHT, HOUSE_MAIN_WALL_Z + STRIPT_OFFSET,
         -HOUSE_MAIN_WALL_LENGTH / 2, STRIPT_HEIGHT, HOUSE_MAIN_WALL_Z + STRIPT_OFFSET
     ]);
-    const stripeIndices = new Uint16Array([
+    const baseStripeIndices = new Uint16Array([
         0, 1, 2,
         0, 2, 3
     ]);
-    stripeGeometry.setAttribute('position', new THREE.BufferAttribute(stripeVertices, 3));
-    stripeGeometry.setIndex(new THREE.BufferAttribute(stripeIndices, 1));
-    stripeGeometry.computeVertexNormals();
+    baseStripeGeometry.setAttribute('position', new THREE.BufferAttribute(baseStripeVertices, 3));
+    baseStripeGeometry.setIndex(new THREE.BufferAttribute(baseStripeIndices, 1));
+    baseStripeGeometry.computeVertexNormals();
 
     const stripeMaterial = new THREE.MeshLambertMaterial({ color: 0x0099cc });
-    const baseStripe = new THREE.Mesh(stripeGeometry, stripeMaterial);
+    const baseStripe = new THREE.Mesh(baseStripeGeometry, stripeMaterial);
     house.add(baseStripe);
 
     // Left Wall stripe (low border)
-    // TODO
+    const leftStripeGeometry = new THREE.BufferGeometry();
+    const leftStripeVertices = new Float32Array([
+        HOUSE_SIDE_WALL_X + STRIPT_OFFSET, 0, HOUSE_MAIN_WALL_Z,
+        HOUSE_SIDE_WALL_X + STRIPT_OFFSET, 0, -HOUSE_SIDE_WALL_LENGTH,
+        HOUSE_SIDE_WALL_X + STRIPT_OFFSET, STRIPT_HEIGHT, -HOUSE_SIDE_WALL_LENGTH,
+        HOUSE_SIDE_WALL_X + STRIPT_OFFSET, STRIPT_HEIGHT, HOUSE_MAIN_WALL_Z
+    ]);
+    const leftStripeIndices = new Uint16Array([
+        0, 1, 2,
+        0, 2, 3
+    ]);
+    leftStripeGeometry.setAttribute('position', new THREE.BufferAttribute(leftStripeVertices, 3));
+    leftStripeGeometry.setIndex(new THREE.BufferAttribute(leftStripeIndices, 1));
+    leftStripeGeometry.computeVertexNormals();
+
+    const leftStripe = new THREE.Mesh(leftStripeGeometry, stripeMaterial);
+    house.add(leftStripe);
 
     scene.add(house);
 }
