@@ -46,7 +46,7 @@ const HOUSE_OFFSET_Z = 0;
 const HOUSE_MAIN_WALL_Z = 10;
 const HOUSE_MAIN_WALL_HEIGHT = 15;
 const HOUSE_MAIN_WALL_LENGTH = 25;
-const HOUSE_SIDE_WALL_LENGTH = 20;
+const HOUSE_SIDE_WALL_LENGTH = 10;
 const HOUSE_SIDE_WALL_X = HOUSE_MAIN_WALL_LENGTH / 2;
 const ROOF_HEIGHT = 10;
 const DOOR_HEIGHT = 10;
@@ -130,8 +130,8 @@ const materialLibrary = {
         treeDebarked: new THREE.MeshPhongMaterial({ color: 0x5e3c1a }),
         treeFoliage: new THREE.MeshPhongMaterial({ color: 0X0f3d0f }),
         house: new THREE.MeshPhongMaterial({ color: 0xffffff }),
-        roof: new THREE.MeshLambertMaterial({ color: 0xff6600 }),
-        door: new THREE.MeshLambertMaterial({ color: 0x8B0000 })
+        roof: new THREE.MeshPhongMaterial({ color: 0xff6600 }),
+        door: new THREE.MeshPhongMaterial({ color: 0x8B0000 })
     },
     toon: {
         moon: new THREE.MeshToonMaterial({ color: 0xFFFFFF, emissive: 0x444444 }),
@@ -148,8 +148,8 @@ const materialLibrary = {
         treeDebarked: new THREE.MeshToonMaterial({ color: 0x5e3c1a }),
         treeFoliage: new THREE.MeshToonMaterial({ color: 0X0f3d0f }),
         house: new THREE.MeshToonMaterial({ color: 0xffffff }),
-        roof: new THREE.MeshLambertMaterial({ color: 0xff6600 }),
-        door: new THREE.MeshLambertMaterial({ color: 0x8B0000 })
+        roof: new THREE.MeshToonMaterial({ color: 0xff6600 }),
+        door: new THREE.MeshToonMaterial({ color: 0x8B0000 })
     }
 };
 
@@ -255,6 +255,11 @@ function createLight(x, y, z) {
     directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1);
     directionalLight.position.set(x, y, z);
     directionalLight.castShadow = true;
+
+    const lightTarget = new THREE.Object3D();
+    lightTarget.position.set(0, -SKYDOME_RADIUS / 2, 0);
+    scene.add(lightTarget);
+    directionalLight.target = lightTarget;
 
     const lightMarkerGeometry = new THREE.SphereGeometry(0.5, 16, 16);
     const lightMarkerMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 }); // amarelo
@@ -432,8 +437,8 @@ function createHouse(x, y, z, materials) {
     const sideGeometry = new THREE.BufferGeometry();
     const sideVertices = new Float32Array([
         HOUSE_SIDE_WALL_X, 0, HOUSE_MAIN_WALL_Z,                                  // 0 front bottom
-        HOUSE_SIDE_WALL_X, 0, -HOUSE_SIDE_WALL_LENGTH / 2,                        // 1 back bottom
-        HOUSE_SIDE_WALL_X, HOUSE_MAIN_WALL_HEIGHT, -HOUSE_MAIN_WALL_Z,            // 2 back top
+        HOUSE_SIDE_WALL_X, 0, -HOUSE_SIDE_WALL_LENGTH,                            // 1 back bottom
+        HOUSE_SIDE_WALL_X, HOUSE_MAIN_WALL_HEIGHT, -HOUSE_SIDE_WALL_LENGTH,       // 2 back top
         HOUSE_SIDE_WALL_X, HOUSE_MAIN_WALL_HEIGHT, HOUSE_MAIN_WALL_Z              // 3 front top
     ]);
     const sideIndices = new Uint16Array([
@@ -451,10 +456,10 @@ function createHouse(x, y, z, materials) {
     // Roof (Pyramid Style)
     const roofGeometry = new THREE.BufferGeometry();
     const roofVertices = new Float32Array([
-        -HOUSE_MAIN_WALL_LENGTH / 2, HOUSE_MAIN_WALL_HEIGHT, -HOUSE_SIDE_WALL_LENGTH / 2,   // 0 back left
-         HOUSE_MAIN_WALL_LENGTH / 2, HOUSE_MAIN_WALL_HEIGHT, -HOUSE_SIDE_WALL_LENGTH / 2,   // 1 back right
-         HOUSE_MAIN_WALL_LENGTH / 2, HOUSE_MAIN_WALL_HEIGHT, HOUSE_MAIN_WALL_Z,             // 2 front right
-        -HOUSE_MAIN_WALL_LENGTH / 2, HOUSE_MAIN_WALL_HEIGHT, HOUSE_MAIN_WALL_Z,             // 3 front left
+        -HOUSE_MAIN_WALL_LENGTH / 2, HOUSE_MAIN_WALL_HEIGHT, -HOUSE_SIDE_WALL_LENGTH,   // 0 back left
+         HOUSE_MAIN_WALL_LENGTH / 2, HOUSE_MAIN_WALL_HEIGHT, -HOUSE_SIDE_WALL_LENGTH,   // 1 back right
+         HOUSE_MAIN_WALL_LENGTH / 2, HOUSE_MAIN_WALL_HEIGHT, HOUSE_MAIN_WALL_Z,         // 2 front right
+        -HOUSE_MAIN_WALL_LENGTH / 2, HOUSE_MAIN_WALL_HEIGHT, HOUSE_MAIN_WALL_Z,         // 3 front left
          0, HOUSE_MAIN_WALL_HEIGHT + ROOF_HEIGHT, 0     // 4 top peak
     ]);
     const roofIndices = new Uint16Array([
@@ -843,6 +848,17 @@ function switchMaterial(type) {
             tree.foliage2.material = materials.treeFoliage;
         });
     }
+
+    // Apply to house
+    // if (materialTargets.house) {
+    //     materialTargets.house.forEach(house => {
+    //         tree.debarked.material = materials.treeDebarked;
+    //         tree.barked.material = materials.treeBark;
+    //         tree.branch.material = materials.treeBark;
+    //         tree.foliage1.material = materials.treeFoliage;
+    //         tree.foliage2.material = materials.treeFoliage;
+    //     });
+    // }
 }
 
 /////////////
