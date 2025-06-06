@@ -171,7 +171,7 @@ const materialLibrary = {
         house: new THREE.MeshBasicMaterial({ color: 0xffffff }),
         roof: new THREE.MeshBasicMaterial({ color: 0xA24C00 }),
         door: new THREE.MeshBasicMaterial({ color: 0x8B0000 }),
-        stripe: new THREE.MeshToonMaterial({ color: 0x0099cc })
+        stripe: new THREE.MeshBasicMaterial({ color: 0x0099cc })
     }
 };
 
