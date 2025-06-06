@@ -91,7 +91,7 @@ const MAX_OVNI_RADIUS = Math.sqrt(SKYDOME_RADIUS*SKYDOME_RADIUS - SKYDOME_RADIUS
 
 const loader = new THREE.TextureLoader();
 const aspect = window.innerWidth / window.innerHeight;
-const size = 150;
+const size = 70;
 let scene, renderer, textureFloral, textureSky, skydome, moon, directionalLight, ovni;
 
 const materialLibrary = {
@@ -119,10 +119,10 @@ const materialLibrary = {
         ovniBody: new THREE.MeshPhongMaterial({ color: 0xbf0453, shininess: 100, emissive: 0x222222 }),
         ovniCockpit: new THREE.MeshPhongMaterial({
             color: 0x88ccff,
-            shininess: 5,
-            emissive: 0x222222,
             transparent: true,
             opacity: 0.7,
+            shininess: 5,
+            emissive: 0x222222,
             specular: 0xffffaa,
             side: THREE.DoubleSide
         }),
@@ -133,7 +133,7 @@ const materialLibrary = {
         house: new THREE.MeshPhongMaterial({ color: 0xffffff }),
         roof: new THREE.MeshPhongMaterial({ color: 0xA24C00 }),
         door: new THREE.MeshPhongMaterial({ color: 0x8B0000 }),
-        stripe: new THREE.MeshLambertMaterial({ color: 0x0099cc })
+        stripe: new THREE.MeshPhongMaterial({ color: 0x0099cc })
     },
     toon: {
         moon: new THREE.MeshToonMaterial({ color: 0xFFFFFF, emissive: 0x444444, emissiveIntensity: 10}),
@@ -152,7 +152,25 @@ const materialLibrary = {
         house: new THREE.MeshToonMaterial({ color: 0xffffff }),
         roof: new THREE.MeshToonMaterial({ color: 0xA24C00 }),
         door: new THREE.MeshToonMaterial({ color: 0x8B0000 }),
-        stripe: new THREE.MeshLambertMaterial({ color: 0x0099cc })
+        stripe: new THREE.MeshToonMaterial({ color: 0x0099cc })
+    },
+    basic: {
+        moon: new THREE.MeshBasicMaterial({ color: 0xFFFFFF }),
+        ovniBody: new THREE.MeshBasicMaterial({ color: 0xbf0453 }),
+        ovniCockpit: new THREE.MeshBasicMaterial({
+            color: 0x88ccff,
+            transparent: true,
+            opacity: 0.7,
+            side: THREE.DoubleSide
+        }),
+        ovniLights: new THREE.MeshBasicMaterial({ color: 0xFFFFAA }),
+        treeBark: new THREE.MeshBasicMaterial({ color: 0xa64500 }),
+        treeDebarked: new THREE.MeshBasicMaterial({ color: 0x5e3c1a }),
+        treeFoliage: new THREE.MeshBasicMaterial({ color: 0X0f3d0f }),
+        house: new THREE.MeshBasicMaterial({ color: 0xffffff }),
+        roof: new THREE.MeshBasicMaterial({ color: 0xA24C00 }),
+        door: new THREE.MeshBasicMaterial({ color: 0x8B0000 }),
+        stripe: new THREE.MeshToonMaterial({ color: 0x0099cc })
     }
 };
 
@@ -173,11 +191,13 @@ function createScene() {
     scene.background = new THREE.Color('#FFFFFF'); // White
     currentMaterial = "lambert";
     calculateLighting = true;
+    const heightmap = 'pictures/heightmap.png';
     createCanvasTexture(CANVAS_WIDTH, CANVAS_HEIGHT);
-    createFieldTexture();
-    createSkyTexture();
+    createFieldTexture(textureFloral);
+    createSkyTexture(textureSky);
     createSkydome(textureSky);
-    createTerrain(0, -SKYDOME_RADIUS / 2, 0, textureFloral, 'pictures/heightmap.png',
+    createTerrainMaterials(textureFloral, heightmap);
+    createTerrain(0, -SKYDOME_RADIUS / 2, 0, heightmap, materialLibrary.lambert.terrain,
                   {debarked: materialLibrary.lambert.treeDebarked, barked: materialLibrary.lambert.treeBark,
                    branch: materialLibrary.lambert.treeBark, foliage: materialLibrary.lambert.treeFoliage},
                   {house: materialLibrary.lambert.house, roof: materialLibrary.lambert.roof,
@@ -257,7 +277,6 @@ function setFixedPerspectiveView() {
 function createLight(x, y, z) {
     directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1.5);
     directionalLight.position.set(x, y, z);
-    directionalLight.castShadow = true;
 
     const lightTarget = new THREE.Object3D();
     lightTarget.position.set(0, -SKYDOME_RADIUS / 2, 0);
@@ -288,8 +307,8 @@ function randInt(min, max) {
     return Math.random() * (max - min) + min;
 }
 
-function createFieldTexture() {
-    const canvas = textureFloral.image;
+function createFieldTexture(texture) {
+    const canvas = texture.image;
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#CAFFC4';   // Light green
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -307,11 +326,11 @@ function createFieldTexture() {
         ctx.fill();
     }
 
-    textureFloral.needsUpdate = true;
+    texture.needsUpdate = true;
 }
 
-function createSkyTexture() {
-    const canvas = textureSky.image;
+function createSkyTexture(texture) {
+    const canvas = texture.image;
     const ctx = canvas.getContext('2d');
 
     const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -331,7 +350,7 @@ function createSkyTexture() {
         ctx.fill();
     }
 
-    textureSky.needsUpdate = true;
+    texture.needsUpdate = true;
 }
 
 function createMoon(x, y, z, material) {
@@ -344,28 +363,49 @@ function createMoon(x, y, z, material) {
     materialTargets.moon = moon;
 }
 
-function createTerrain(x, y, z, texture, heightmap, treeMaterials, houseMaterials) {
-    const geometry = new THREE.PlaneGeometry(PLANE_WIDTH, PLANE_HEIGHT, 64, 64);
-
-    const terrainTexture = loader.load(heightmap);
-    texture.colorSpace = THREE.SRGBColorSpace;      // este material precisa de luz!!
-    const material = new THREE.MeshPhongMaterial({  // usar phong? antes usei standard q é mais accurate em termos de física, pior em termos de performance (mais pesado)
-        map: texture,                               //TODO: ver wrapping / filtering das aulas teóricas
-        aoMap: terrainTexture,
+function createTerrainMaterials(texture, heightmap) {
+    const heightMapTexture = loader.load(heightmap);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    materialLibrary.lambert.terrain = new THREE.MeshLambertMaterial({
+        map: texture,
+        aoMap: heightMapTexture,
         aoMapIntensity: 0.75,
-        displacementMap: terrainTexture,
+        displacementMap: heightMapTexture,
         displacementScale: MAX_TERRAIN_HEIGHT,
-        side: THREE.DoubleSide,
-    });
+        side: THREE.DoubleSide
+    }),
+    materialLibrary.phong.terrain = new THREE.MeshPhongMaterial({
+        map: texture,
+        aoMap: heightMapTexture,
+        aoMapIntensity: 0.75,
+        displacementMap: heightMapTexture,
+        displacementScale: MAX_TERRAIN_HEIGHT,
+        side: THREE.DoubleSide
+    }),
+    materialLibrary.toon.terrain = new THREE.MeshToonMaterial({
+        map: texture,
+        aoMap: heightMapTexture,
+        aoMapIntensity: 0.75,
+        displacementMap: heightMapTexture,
+        displacementScale: MAX_TERRAIN_HEIGHT,
+        side: THREE.DoubleSide
+    }),
+    materialLibrary.basic.terrain = new THREE.MeshBasicMaterial({
+        map: texture,
+        side: THREE.DoubleSide
+    })
+}
 
-    const terrain = new THREE.Mesh(geometry, material);
+
+function createTerrain(x, y, z, heightmap, terrainMaterial, treeMaterials, houseMaterials) {
+    const geometry = new THREE.PlaneGeometry(PLANE_WIDTH, PLANE_HEIGHT, 64, 64);
+    const terrain = new THREE.Mesh(geometry, terrainMaterial);
     terrain.position.set(x, y, z);
     terrain.rotation.x = -Math.PI / 2; // rotate it to make it flat on the XZ plane
     //terrain.rotation.z = Math.PI / 4;  //TODO: ver como é q deixamos rotações/posição
-
-    // TENTATIVA SPOTLIGHT TIRAR DEPOIS
-    terrain.receiveShadow = true;
     scene.add(terrain);
+    // Register to global target
+    materialTargets.terrain = terrain;
     
     img = new Image();
     img.src = heightmap;
@@ -645,7 +685,6 @@ function createTree(x, y, z, materials) {
     tree.add(foliage2);
 
     tree.position.set(x, y, z);
-    tree.receiveShadow = true;
     scene.add(tree);
 
     // return the tree meshes
@@ -727,14 +766,6 @@ function createOvni(x, y, z, materials) {
     base.add(spotlight);
     base.add(spotlight.target);
     ovni.spotLight = spotlight;
-
-    // TENTATIVA SPOTLIGHT TIRAR DEPOIS
-    //spotlight.castShadow = true;
-    // ovni.castShadow = true;
-    // body.castShadow = true;
-    // body.receiveShadow = true;
-    // base.castShadow = true;
-    // base.receiveShadow = true;
 
     ovni.lightsOn = true;
     ovni.movementVector = {
@@ -844,6 +875,9 @@ function switchMaterial(type) {
         ovniParts.lights.forEach(mesh => {
             mesh.material = materials.ovniLights;
         });
+        if ('emissive' in materials.ovniLights) {
+            materials.ovniLights.emissive.set(ovni.lightsOn ? 0xFFFFAA : 0x000000);
+        }
     }
 
     // Apply to trees
@@ -867,6 +901,11 @@ function switchMaterial(type) {
     //         tree.foliage2.material = materials.treeFoliage;
     //     });
     // }
+
+    // Apply to terrain
+    if (materialTargets.terrain) {
+        materialTargets.terrain.material = materials.terrain;
+    }
 }
 
 /////////////
@@ -898,10 +937,6 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
     enableVRmode();
-
-    // TENTATIVA SPOTLIGHT TIRAR DEPOIS
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     createScene();
     createCamera();
@@ -949,10 +984,10 @@ function onResize() {
 function onKeyDown(e) {
     switch(e.key) {
         case '1':
-            createFieldTexture();
+            createFieldTexture(textureFloral);
             break;
         case '2':
-            createSkyTexture();
+            createSkyTexture(textureSky);
             break;
         case '7':
             // Only disable VR mode if the user is currently in a VR session 
