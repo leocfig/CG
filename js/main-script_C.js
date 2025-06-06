@@ -96,7 +96,7 @@ let scene, renderer, textureFloral, textureSky, skydome, moon, directionalLight,
 
 const materialLibrary = {
     lambert: {
-        moon: new THREE.MeshLambertMaterial({ color: 0xFFFFFF, emissive: 0x444444 }),
+        moon: new THREE.MeshLambertMaterial({ color: 0xFFFFFF, emissive: 0x444444 , emissiveIntensity: 15}),
         ovniBody: new THREE.MeshLambertMaterial({ color: 0xbf0453, emissive: 0x222222 }),
         ovniCockpit: new THREE.MeshLambertMaterial({
             color: 0x88ccff,
@@ -252,7 +252,7 @@ function setFixedPerspectiveView() {
 /* CREATE LIGHT(S) */
 /////////////////////
 function createLight(x, y, z) {
-    directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1);
+    directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1.5);
     directionalLight.position.set(x, y, z);
     directionalLight.castShadow = true;
 
@@ -261,21 +261,8 @@ function createLight(x, y, z) {
     scene.add(lightTarget);
     directionalLight.target = lightTarget;
 
-    const lightMarkerGeometry = new THREE.SphereGeometry(0.5, 16, 16);
-    const lightMarkerMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 }); // amarelo
-    const lightMarker = new THREE.Mesh(lightMarkerGeometry, lightMarkerMaterial);
-
-    // Mesma posição da luz
-    lightMarker.position.copy(directionalLight.position);
-    scene.add(lightMarker);
-
-    const dirLightHelper = new THREE.DirectionalLightHelper(directionalLight, 5); // 5 = tamanho
-    scene.add(dirLightHelper);
-
     directionalLight.lightOn = true;
     scene.add(directionalLight);
-    // const ambientLight = new THREE.AmbientLight(0xffffff, 2.5); // TODO: mudar luzes dps -> escolher uma 
-    // scene.add(ambientLight);
 }
 
 ////////////////////////
