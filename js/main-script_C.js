@@ -96,7 +96,7 @@ let scene, renderer, textureFloral, textureSky, skydome, moon, directionalLight,
 
 const materialLibrary = {
     lambert: {
-        moon: new THREE.MeshLambertMaterial({ color: 0xFFFFFF, emissive: 0x444444 , emissiveIntensity: 15}),
+        moon: new THREE.MeshLambertMaterial({ color: 0xFFFFFF, emissive: 0x444444, emissiveIntensity: 15}),
         ovniBody: new THREE.MeshLambertMaterial({ color: 0xbf0453, emissive: 0x222222 }),
         ovniCockpit: new THREE.MeshLambertMaterial({
             color: 0x88ccff,
@@ -112,9 +112,10 @@ const materialLibrary = {
         house: new THREE.MeshLambertMaterial({ color: 0xffffff }),
         roof: new THREE.MeshLambertMaterial({ color: 0xA24C00 }),
         door: new THREE.MeshLambertMaterial({ color: 0x8B0000 }),
+        stripe: new THREE.MeshLambertMaterial({ color: 0x0099cc })
     },
     phong: {
-        moon: new THREE.MeshPhongMaterial({ color: 0xFFFFFF, shininess: 100, emissive: 0x444444 }),
+        moon: new THREE.MeshPhongMaterial({ color: 0xFFFFFF, shininess: 100, emissive: 0x444444, emissiveIntensity: 15}),
         ovniBody: new THREE.MeshPhongMaterial({ color: 0xbf0453, shininess: 100, emissive: 0x222222 }),
         ovniCockpit: new THREE.MeshPhongMaterial({
             color: 0x88ccff,
@@ -131,10 +132,11 @@ const materialLibrary = {
         treeFoliage: new THREE.MeshPhongMaterial({ color: 0X0f3d0f }),
         house: new THREE.MeshPhongMaterial({ color: 0xffffff }),
         roof: new THREE.MeshPhongMaterial({ color: 0xA24C00 }),
-        door: new THREE.MeshPhongMaterial({ color: 0x8B0000 })
+        door: new THREE.MeshPhongMaterial({ color: 0x8B0000 }),
+        stripe: new THREE.MeshLambertMaterial({ color: 0x0099cc })
     },
     toon: {
-        moon: new THREE.MeshToonMaterial({ color: 0xFFFFFF, emissive: 0x444444 }),
+        moon: new THREE.MeshToonMaterial({ color: 0xFFFFFF, emissive: 0x444444, emissiveIntensity: 10}),
         ovniBody: new THREE.MeshToonMaterial({ color: 0xbf0453, emissive: 0x222222 }),
         ovniCockpit: new THREE.MeshToonMaterial({
             color: 0x88ccff,
@@ -149,7 +151,8 @@ const materialLibrary = {
         treeFoliage: new THREE.MeshToonMaterial({ color: 0X0f3d0f }),
         house: new THREE.MeshToonMaterial({ color: 0xffffff }),
         roof: new THREE.MeshToonMaterial({ color: 0xA24C00 }),
-        door: new THREE.MeshToonMaterial({ color: 0x8B0000 })
+        door: new THREE.MeshToonMaterial({ color: 0x8B0000 }),
+        stripe: new THREE.MeshLambertMaterial({ color: 0x0099cc })
     }
 };
 
@@ -178,7 +181,7 @@ function createScene() {
                   {debarked: materialLibrary.lambert.treeDebarked, barked: materialLibrary.lambert.treeBark,
                    branch: materialLibrary.lambert.treeBark, foliage: materialLibrary.lambert.treeFoliage},
                   {house: materialLibrary.lambert.house, roof: materialLibrary.lambert.roof,
-                   door: materialLibrary.lambert.door});
+                   door: materialLibrary.lambert.door, stripe: materialLibrary.lambert.stripe});
     createMoon(MOON_OFFSET_X, MOON_OFFSET_Y, MOON_OFFSET_Z, materialLibrary.lambert.moon);
     createLight(MOON_OFFSET_X + MOON_RADIUS, MOON_OFFSET_Y, MOON_OFFSET_Z + MOON_RADIUS);
     createOvni(OVNI_OFFSET_X, OVNI_OFFSET_Y, OVNI_OFFSET_Z, {body: materialLibrary.lambert.ovniBody,
@@ -535,8 +538,7 @@ function createHouse(x, y, z, materials) {
     baseStripeGeometry.setIndex(new THREE.BufferAttribute(baseStripeIndices, 1));
     baseStripeGeometry.computeVertexNormals();
 
-    const stripeMaterial = new THREE.MeshLambertMaterial({ color: 0x0099cc });
-    const baseStripe = new THREE.Mesh(baseStripeGeometry, stripeMaterial);
+    const baseStripe = new THREE.Mesh(baseStripeGeometry, materials.stripe);
     house.add(baseStripe);
 
     // Left Wall stripe (low border)
@@ -555,7 +557,7 @@ function createHouse(x, y, z, materials) {
     leftStripeGeometry.setIndex(new THREE.BufferAttribute(leftStripeIndices, 1));
     leftStripeGeometry.computeVertexNormals();
 
-    const leftStripe = new THREE.Mesh(leftStripeGeometry, stripeMaterial);
+    const leftStripe = new THREE.Mesh(leftStripeGeometry, materials.stripe);
     house.add(leftStripe);
 
     scene.add(house);
@@ -828,6 +830,9 @@ function switchMaterial(type) {
     // Apply to moon
     if (materialTargets.moon) {
         materialTargets.moon.material = materials.moon;
+        if ('emissive' in materials.moon) {
+            materials.moon.emissive.set(directionalLight.lightOn ? 0x444444 : 0x000000);
+        }
     }
 
     // Apply to ovni parts
