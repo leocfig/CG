@@ -9,6 +9,14 @@ import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 /* CONSTANTS */
 ///////////////
 
+// Perspective camera
+const CAMERA_X = 90;
+const CAMERA_Y = 0;
+const CAMERA_Z = 80;
+const CAMERA_TARGET_X = 0;
+const CAMERA_TARGET_Y = -30;
+const CAMERA_TARGET_Z = 0;
+
 // Canvas
 const CANVAS_WIDTH = 2048;
 const CANVAS_HEIGHT = 2048;
@@ -261,9 +269,9 @@ function setTopView() {
 }
 
 function setFixedPerspectiveView() {
-    if (!perspectiveCamera) perspectiveCamera = new THREE.PerspectiveCamera(70, aspect, 1, 1000);
-    perspectiveCamera.position.set(80, 70, 80);
-    perspectiveCamera.lookAt(scene.position);
+    perspectiveCamera = new THREE.PerspectiveCamera(70, aspect, 1, 1000);
+    perspectiveCamera.position.set(CAMERA_X, CAMERA_Y, CAMERA_Z);
+    perspectiveCamera.lookAt(CAMERA_TARGET_X, CAMERA_TARGET_Y, CAMERA_TARGET_Z);
     camera = perspectiveCamera;
 }
 
