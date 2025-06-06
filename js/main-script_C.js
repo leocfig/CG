@@ -4,9 +4,6 @@ import { VRButton } from "three/addons/webxr/VRButton.js";
 import * as Stats from "three/addons/libs/stats.module.js";
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 
-// DÚVIDAS
-
-// Ter as posições das árvores num array dentro da função de ScatterTrees?
 
 ///////////////
 /* CONSTANTS */
@@ -43,6 +40,7 @@ const foliageY = TREE_HEIGHT * 1.1;
 // House
 const HOUSE_OFFSET_X = 55;
 const HOUSE_OFFSET_Z = 0;
+const TERRAIN_SAMPLE_GRID = 10; // number of samples per axis (X and Z)
 const HOUSE_MAIN_WALL_Z = 10;
 const HOUSE_MAIN_WALL_HEIGHT = 15;
 const HOUSE_MAIN_WALL_LENGTH = 25;
@@ -54,21 +52,17 @@ const DOOR_LENGHT = 5;
 const WINDOW_HEIGHT = 5;
 const WINDOW_LENGHT = 4;
 const STRIPT_HEIGHT = 3;
-const STRIPT_OFFSET = 0.05; // to avoid z-fighting
+const STRIPT_OFFSET = 0.05;     // to avoid z-fighting
 
 // Moon
 const MOON_RADIUS = 10;
 const MOON_OFFSET_X = - SKYDOME_RADIUS * 0.4;
 const MOON_OFFSET_Y = -SKYDOME_RADIUS / 2 + SKYDOME_RADIUS * 0.65;
-const MOON_OFFSET_Z = SKYDOME_RADIUS / 2 ;
+const MOON_OFFSET_Z = SKYDOME_RADIUS / 2;
 
 // Terrain
-//const PLANE_WIDTH = window.innerWidth / 4;
-//const PLANE_HEIGHT = 10;
-//const PLANE_HEIGHT = window.innerHeight / 5;
-//const HEIGHTMAP_WIDTH = 505;
-//const HEIGHTMAP_HEIGHT = 505;
 const MAX_TERRAIN_HEIGHT = 25;
+const TERRAIN_OFFSET_Y = - SKYDOME_RADIUS / 2;
 
 // Ovni
 const OVNI_RADIUS = 8;
@@ -191,12 +185,12 @@ function createScene() {
     currentMaterial = "lambert";
     calculateLighting = true;
     const heightmap = 'pictures/heightmap.png';
-    createCanvasTexture(CANVAS_WIDTH, CANVAS_HEIGHT);
-    createFieldTexture(textureFloral);
-    createSkyTexture(textureSky);
+    createCanvasTextures(CANVAS_WIDTH, CANVAS_HEIGHT);
+    generateFieldTexture(textureFloral);
+    generateSkyTexture(textureSky);
     createSkydome(textureSky);
     createTerrainMaterials(textureFloral, heightmap);
-    createTerrain(0, -SKYDOME_RADIUS / 2, 0, heightmap, materialLibrary.lambert.terrain,
+    createTerrain(0, TERRAIN_OFFSET_Y, 0, heightmap, materialLibrary.lambert.terrain,
                   {debarked: materialLibrary.lambert.treeDebarked, barked: materialLibrary.lambert.treeBark,
                    branch: materialLibrary.lambert.treeBark, foliage: materialLibrary.lambert.treeFoliage},
                   {house: materialLibrary.lambert.house, roof: materialLibrary.lambert.roof,
@@ -278,7 +272,7 @@ function createLight(x, y, z) {
     directionalLight.position.set(x, y, z);
 
     const lightTarget = new THREE.Object3D();
-    lightTarget.position.set(0, -SKYDOME_RADIUS / 2, 0);
+    lightTarget.position.set(0, TERRAIN_OFFSET_Y, 0);
     scene.add(lightTarget);
     directionalLight.target = lightTarget;
 
@@ -290,7 +284,7 @@ function createLight(x, y, z) {
 /* CREATE OBJECT3D(S) */
 ////////////////////////
 
-function createCanvasTexture(width, height) {
+function createCanvasTextures(width, height) {
     const canvasSky = document.createElement('canvas');
     canvasSky.width = width;
     canvasSky.height = height;
@@ -306,7 +300,7 @@ function randInt(min, max) {
     return Math.random() * (max - min) + min;
 }
 
-function createFieldTexture(texture) {
+function generateFieldTexture(texture) {
     const canvas = texture.image;
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#CAFFC4';   // Light green
@@ -328,7 +322,7 @@ function createFieldTexture(texture) {
     texture.needsUpdate = true;
 }
 
-function createSkyTexture(texture) {
+function generateSkyTexture(texture) {
     const canvas = texture.image;
     const ctx = canvas.getContext('2d');
 
@@ -395,14 +389,13 @@ function createTerrainMaterials(texture, heightmap) {
     })
 }
 
-
 function createTerrain(x, y, z, heightmap, terrainMaterial, treeMaterials, houseMaterials) {
     const geometry = new THREE.PlaneGeometry(PLANE_WIDTH, PLANE_HEIGHT, 64, 64);
     const terrain = new THREE.Mesh(geometry, terrainMaterial);
     terrain.position.set(x, y, z);
     terrain.rotation.x = -Math.PI / 2; // rotate it to make it flat on the XZ plane
-    //terrain.rotation.z = Math.PI / 4;  //TODO: ver como é q deixamos rotações/posição
     scene.add(terrain);
+
     // Register to global target
     materialTargets.terrain = terrain;
     
@@ -413,13 +406,21 @@ function createTerrain(x, y, z, heightmap, terrainMaterial, treeMaterials, house
         heightmapHeight = img.naturalHeight;
         heightData = getHeightData(img, heightmapWidth, heightmapHeight);
         scatterTrees(treeMaterials);
-        // Refactor para isto não ter assim os valores das coordenadas
-        createHouse(
+
+        const baseY = getMinimumHeightOnRectangularPerimeter(
             HOUSE_OFFSET_X,
-            getHeightAt(HOUSE_OFFSET_X, HOUSE_OFFSET_Z, heightData, heightmapWidth, heightmapHeight, PLANE_WIDTH, MAX_TERRAIN_HEIGHT) - SKYDOME_RADIUS / 2,
             HOUSE_OFFSET_Z,
-            houseMaterials
+            HOUSE_MAIN_WALL_LENGTH,
+            HOUSE_SIDE_WALL_LENGTH,
+            TERRAIN_SAMPLE_GRID,
+            heightData,
+            heightmapWidth,
+            heightmapHeight,
+            PLANE_WIDTH,
+            MAX_TERRAIN_HEIGHT
         );
+
+        createHouse(HOUSE_OFFSET_X, baseY - SKYDOME_RADIUS / 2, HOUSE_OFFSET_Z, houseMaterials);
     };
 }
 
@@ -626,6 +627,42 @@ function getHeightData(img, width, height) {
     }
     return data;
 }
+
+// This function samples only the perimeter (edges) of a large object's base area to determine
+// the minimum terrain height underneath it. Since terrain can be uneven, using only the center
+// height may cause parts of the object to float above ground.
+function getMinimumHeightOnRectangularPerimeter(centerX, centerZ, width, depth, samplesPerEdge,
+    heightData, heightmapWidth, heightmapHeight, planeWidth, maxHeight) {
+        
+    let minY = Infinity;
+
+    function checkPoint(x, z) {
+        const y = getHeightAt(x, z, heightData, heightmapWidth, heightmapHeight, planeWidth, maxHeight);
+        if (y < minY) {
+            minY = y;
+        }
+    }
+
+    for (let i = 0; i <= samplesPerEdge; i++) {
+        // t goes from 0 to 1 — used to calculate evenly spaced points along each edge
+        const t = i / samplesPerEdge;
+
+        // Front edge (Z+)
+        checkPoint(centerX - width / 2 + t * width, centerZ + depth / 2);
+
+        // Back edge (Z-)
+        checkPoint(centerX - width / 2 + t * width, centerZ - depth / 2);
+
+        // Left edge (X-)
+        checkPoint(centerX - width / 2, centerZ - depth / 2 + t * depth);
+
+        // Right edge (X+)
+        checkPoint(centerX + width / 2, centerZ - depth / 2 + t * depth);
+    }
+
+    return minY;
+}
+
 
 function getHeightAt(x, z, heightData, heightmapWidth, heightmapHeight, planeSize, maxHeight) {
     const halfSize = planeSize / 2;
@@ -963,17 +1000,7 @@ function init() {
 /////////////////////
 /* ANIMATION CYCLE */
 /////////////////////
-//function animate() {
-    // update();
-    // if (useStereo) {
-    //     renderStereo();
-    // } else {
-    // render();
-    // }
-    // requestAnimationFrame(animate);
-//}
-
-function startXRLoop() {                // TOASK -> então fica assim? É suposto não existir animate? Ou só depois de se clicar na tecla 7?
+function animate() {
     renderer.setAnimationLoop(() => {
         update();
         render();
@@ -1071,5 +1098,4 @@ function onKeyUp(e) {
 }
 
 init();
-//animate();
-startXRLoop();
+animate();
