@@ -168,12 +168,17 @@ const materialLibrary = {
     }
 };
 
+const terrainDependentObjects = {
+    trees: [],
+    house: []
+};
+
 const materialTargets = {};
 
 let camera, orthoCamera, perspectiveCamera;
 let heightData, img;
 let heightmapWidth, heightmapHeight;
-let generateTexture, currentMaterial, calculateLighting;
+let generateTexture, currentMaterial, calculateLighting, wasBasicMaterial;
 const clock = new THREE.Clock();
 
 /////////////////////
@@ -184,6 +189,7 @@ function createScene() {
     scene.background = new THREE.Color('#FFFFFF'); // White
     currentMaterial = "lambert";
     calculateLighting = true;
+    wasBasicMaterial = false;
     const heightmap = 'pictures/heightmap.png';
     createCanvasTextures(CANVAS_WIDTH, CANVAS_HEIGHT);
     generateFieldTexture(textureFloral);
@@ -276,6 +282,33 @@ function createLight(x, y, z) {
 
     directionalLight.lightOn = true;
     scene.add(directionalLight);
+}
+
+function createOvniLights(y, ovniBody) {
+    const pointLights = [];
+    const bulbMeshes = [];
+
+    for (let i = 0; i < OVNI_NUM_LIGHTS; i++) {
+        const angle = (i / OVNI_NUM_LIGHTS) * Math.PI * 2;
+        const x = Math.cos(angle) * OVNI_LIGHTS_RADIUS;
+        const z = Math.sin(angle) * OVNI_LIGHTS_RADIUS;
+        
+        const geometry = new THREE.SphereGeometry(0.5, 16, 16);
+        const bulb = new THREE.Mesh(geometry, materialLibrary.lambert.ovniLights);
+        bulb.position.set(x, y, z);
+        ovniBody.add(bulb);
+        bulbMeshes.push(bulb);
+
+        const light = new THREE.PointLight(0xffffff, 1, 10);
+        light.position.copy(bulb.position);
+        ovniBody.add(light);
+        pointLights.push(light);
+    }
+
+    if (!materialTargets.ovni) materialTargets.ovni = {};
+    materialTargets.ovni.lights = bulbMeshes;
+
+    return pointLights;
 }
 
 ////////////////////////
@@ -523,6 +556,9 @@ function createHouse(x, y, z, materials) {
         baseStripe: baseStripe,
         leftStripe: leftStripe
     };
+
+    terrainDependentObjects.house[0] = house;
+    house.userData.originalY = y; // Store the terrain-based Y for later restoration
 }
 
 function createRectPlane(width, height, depthOffset, material, position = new THREE.Vector3(), rotationX) {
@@ -674,6 +710,8 @@ function createTree(x, y, z, materials) {
 
     tree.position.set(x, y, z);
     scene.add(tree);
+    terrainDependentObjects.trees.push(tree);
+    tree.userData.originalY = y; // Store the terrain-based Y for later restoration
 
     // return the tree meshes
     return {
@@ -764,33 +802,6 @@ function createOvni(x, y, z, materials) {
     };
 }
 
-function createOvniLights(y, ovniBody) {
-    const pointLights = [];
-    const bulbMeshes = [];
-
-    for (let i = 0; i < OVNI_NUM_LIGHTS; i++) {
-        const angle = (i / OVNI_NUM_LIGHTS) * Math.PI * 2;
-        const x = Math.cos(angle) * OVNI_LIGHTS_RADIUS;
-        const z = Math.sin(angle) * OVNI_LIGHTS_RADIUS;
-        
-        const geometry = new THREE.SphereGeometry(0.5, 16, 16);
-        const bulb = new THREE.Mesh(geometry, materialLibrary.lambert.ovniLights);
-        bulb.position.set(x, y, z);
-        ovniBody.add(bulb);
-        bulbMeshes.push(bulb);
-
-        const light = new THREE.PointLight(0xffffff, 1, 10);
-        light.position.copy(bulb.position);
-        ovniBody.add(light);
-        pointLights.push(light);
-    }
-
-    if (!materialTargets.ovni) materialTargets.ovni = {};
-    materialTargets.ovni.lights = bulbMeshes;
-
-    return pointLights;
-}
-
 //////////////////////
 /* CHECK COLLISIONS */
 //////////////////////
@@ -853,13 +864,37 @@ function updateOvni(delta){
     if (distanceFromCenter < MAX_OVNI_RADIUS)   ovni.position.add(movement);
 }
 
+function updateTerrainObjectHeights(useOriginalHeights) {
+    // Trees
+    terrainDependentObjects.trees.forEach(tree => {
+        tree.position.y = useOriginalHeights 
+            ? tree.userData.originalY 
+            : TERRAIN_OFFSET_Y;
+    });
+
+    // House
+    if (terrainDependentObjects.house[0]) {
+        const house = terrainDependentObjects.house[0];
+        house.position.y = useOriginalHeights 
+            ? house.userData.originalY 
+            : TERRAIN_OFFSET_Y;
+    }
+}
+
 function switchMaterial(type) {
     const materials = materialLibrary[type];
+    const isBasic = type === "basic";
 
     if (!materials) {
         console.warn(`Material type "${type}" not found.`);
         return;
     }
+
+    if (wasBasicMaterial && !isBasic) {             // If it's switching from basic to non basic
+        updateTerrainObjectHeights(true);           // Restore original Y
+    } else if (!wasBasicMaterial && isBasic) {      // If it's switching from non basic to basic
+        updateTerrainObjectHeights(false);          // Set Y = TERRAIN_OFFSET_Y
+    }                                               // Otherwise, the y position is not updated
 
     // Apply to moon
     if (materialTargets.moon) {
@@ -911,6 +946,8 @@ function switchMaterial(type) {
     if (materialTargets.terrain) {
         materialTargets.terrain.material = materials.terrain;
     }
+
+    wasBasicMaterial = isBasic; // Updates state
 }
 
 /////////////
