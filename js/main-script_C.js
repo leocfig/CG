@@ -1034,8 +1034,8 @@ function onKeyDown(e) {
             // Only disable VR mode if the user is currently in a VR session 
             if (renderer.xr.isPresenting) {
                 disableVRmode();
+                setFixedPerspectiveView();
             }
-            setFixedPerspectiveView();
             break;
         case '8': // vai ser para tirar
             setFrontView();
