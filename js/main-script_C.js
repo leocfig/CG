@@ -124,9 +124,9 @@ const materialLibrary = {
         treeBark: new THREE.MeshPhongMaterial({ color: 0x5e3c1a }),
         treeDebarked: new THREE.MeshPhongMaterial({ color: 0xa64500 }),
         treeFoliage: new THREE.MeshPhongMaterial({ color: 0X0f3d0f }),
-        house: new THREE.MeshPhongMaterial({ color: 0xffffff }),
-        roof: new THREE.MeshPhongMaterial({ color: 0xA24C00 }),
-        door: new THREE.MeshPhongMaterial({ color: 0x8B0000 }),
+        house: new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 30, emissive: 0x222222 }),
+        roof: new THREE.MeshPhongMaterial({ color: 0xA24C00, shininess: 100, emissive: 0x222222 }),
+        door: new THREE.MeshPhongMaterial({ color: 0x8B0000, shininess: 100, emissive: 0x222222 }),
         stripe: new THREE.MeshPhongMaterial({ color: 0x0099cc })
     },
     toon: {
@@ -440,8 +440,6 @@ function createHouse(x, y, z, materials) {
     house.position.set(x, y, z);
 
     // Main Wall (Front Face)
-    const frontWallGeometry = new THREE.BufferGeometry();
-
     // Vertices for a flat rectangular front face
     const frontVertices = new Float32Array([
         -HOUSE_MAIN_WALL_LENGTH / 2, 0, HOUSE_MAIN_WALL_Z,                        // 0 bottom left
@@ -449,22 +447,14 @@ function createHouse(x, y, z, materials) {
          HOUSE_MAIN_WALL_LENGTH / 2, HOUSE_MAIN_WALL_HEIGHT, HOUSE_MAIN_WALL_Z,   // 2 top right
         -HOUSE_MAIN_WALL_LENGTH / 2, HOUSE_MAIN_WALL_HEIGHT, HOUSE_MAIN_WALL_Z    // 3 top left
     ]);
-
     // Two triangles using vertex indices
     const frontIndices = new Uint16Array([
         0, 1, 2,
         0, 2, 3
     ]);
-
-    frontWallGeometry.setAttribute('position', new THREE.BufferAttribute(frontVertices, 3));
-    frontWallGeometry.setIndex(new THREE.BufferAttribute(frontIndices, 1));
-    frontWallGeometry.computeVertexNormals();
-
-    const frontWall = new THREE.Mesh(frontWallGeometry, materials.house);
-    house.add(frontWall);
+    const mainWall = createHouseComponent(frontVertices, frontIndices, materials.house);
 
     // Side Wall (Right Face)
-    const sideGeometry = new THREE.BufferGeometry();
     const sideVertices = new Float32Array([
         HOUSE_SIDE_WALL_X, 0, HOUSE_MAIN_WALL_Z,                                  // 0 front bottom
         HOUSE_SIDE_WALL_X, 0, -HOUSE_SIDE_WALL_LENGTH,                            // 1 back bottom
@@ -475,16 +465,9 @@ function createHouse(x, y, z, materials) {
         0, 1, 2,
         0, 2, 3
     ]);
-
-    sideGeometry.setAttribute('position', new THREE.BufferAttribute(sideVertices, 3));
-    sideGeometry.setIndex(new THREE.BufferAttribute(sideIndices, 1));
-    sideGeometry.computeVertexNormals();
-
-    const sideWall = new THREE.Mesh(sideGeometry, materials.house); // reuse same material
-    house.add(sideWall);
+    const sideWall = createHouseComponent(sideVertices, sideIndices, materials.house);
 
     // Roof (Pyramid Style)
-    const roofGeometry = new THREE.BufferGeometry();
     const roofVertices = new Float32Array([
         -HOUSE_MAIN_WALL_LENGTH / 2, HOUSE_MAIN_WALL_HEIGHT, -HOUSE_SIDE_WALL_LENGTH,   // 0 back left
          HOUSE_MAIN_WALL_LENGTH / 2, HOUSE_MAIN_WALL_HEIGHT, -HOUSE_SIDE_WALL_LENGTH,   // 1 back right
@@ -498,16 +481,9 @@ function createHouse(x, y, z, materials) {
         2, 4, 3,
         3, 4, 0
     ]);
-
-    roofGeometry.setAttribute('position', new THREE.BufferAttribute(roofVertices, 3));
-    roofGeometry.setIndex(new THREE.BufferAttribute(roofIndices, 1));
-    roofGeometry.computeVertexNormals();
-
-    const roof = new THREE.Mesh(roofGeometry, materials.roof);
-    house.add(roof);
+    const roof = createHouseComponent(roofVertices, roofIndices, materials.roof);
 
     // Door (on Front Wall)
-    const doorGeometry = new THREE.BufferGeometry();
     const doorVertices = new Float32Array([
         -DOOR_LENGHT / 2, 0, HOUSE_MAIN_WALL_Z + 1.5*STRIPT_OFFSET,
          DOOR_LENGHT / 2, 0, HOUSE_MAIN_WALL_Z + 1.5*STRIPT_OFFSET,
@@ -518,15 +494,9 @@ function createHouse(x, y, z, materials) {
         0, 1, 2,
         0, 2, 3
     ]);
-    doorGeometry.setAttribute('position', new THREE.BufferAttribute(doorVertices, 3));
-    doorGeometry.setIndex(new THREE.BufferAttribute(doorIndices, 1));
-    doorGeometry.computeVertexNormals();
-
-    const door = new THREE.Mesh(doorGeometry, materials.door);
-    house.add(door);
+    const door = createHouseComponent(doorVertices, doorIndices, materials.door);
 
     // Windows
-    const rightWindowGeometry = new THREE.BufferGeometry();
     const rightWindowVertices = new Float32Array([
         -WINDOW_LENGHT / 2 - HOUSE_MAIN_WALL_LENGTH / 3, HOUSE_MAIN_WALL_HEIGHT / 3, HOUSE_MAIN_WALL_Z + 1.5*STRIPT_OFFSET,
          WINDOW_LENGHT / 2 - HOUSE_MAIN_WALL_LENGTH / 3, HOUSE_MAIN_WALL_HEIGHT / 3, HOUSE_MAIN_WALL_Z + 1.5*STRIPT_OFFSET,
@@ -537,14 +507,8 @@ function createHouse(x, y, z, materials) {
         0, 1, 2,
         0, 2, 3
     ]);
-    rightWindowGeometry.setAttribute('position', new THREE.BufferAttribute(rightWindowVertices, 3));
-    rightWindowGeometry.setIndex(new THREE.BufferAttribute(rightWindowIndices, 1));
-    rightWindowGeometry.computeVertexNormals();
+    const rightWindow = createHouseComponent(rightWindowVertices, rightWindowIndices, materials.door);
 
-    const rightWindow = new THREE.Mesh(rightWindowGeometry, materials.door);
-    house.add(rightWindow);
-
-    const leftWindowGeometry = new THREE.BufferGeometry();
     const leftWindowVertices = new Float32Array([
         -WINDOW_LENGHT / 2 + HOUSE_MAIN_WALL_LENGTH / 3, HOUSE_MAIN_WALL_HEIGHT / 3, HOUSE_MAIN_WALL_Z + 1.5*STRIPT_OFFSET,
          WINDOW_LENGHT / 2 + HOUSE_MAIN_WALL_LENGTH / 3, HOUSE_MAIN_WALL_HEIGHT / 3, HOUSE_MAIN_WALL_Z + 1.5*STRIPT_OFFSET,
@@ -555,15 +519,9 @@ function createHouse(x, y, z, materials) {
         0, 1, 2,
         0, 2, 3
     ]);
-    leftWindowGeometry.setAttribute('position', new THREE.BufferAttribute(leftWindowVertices, 3));
-    leftWindowGeometry.setIndex(new THREE.BufferAttribute(leftWindowIndices, 1));
-    leftWindowGeometry.computeVertexNormals();
-
-    const leftWindow = new THREE.Mesh(leftWindowGeometry, materials.door);
-    house.add(leftWindow);
+    const leftWindow = createHouseComponent(leftWindowVertices, leftWindowIndices, materials.door);
 
     // Base Wall stripe (low border)
-    const baseStripeGeometry = new THREE.BufferGeometry();
     const baseStripeVertices = new Float32Array([
         -HOUSE_MAIN_WALL_LENGTH / 2, 0, HOUSE_MAIN_WALL_Z + STRIPT_OFFSET,
          HOUSE_MAIN_WALL_LENGTH / 2, 0, HOUSE_MAIN_WALL_Z + STRIPT_OFFSET,
@@ -574,15 +532,9 @@ function createHouse(x, y, z, materials) {
         0, 1, 2,
         0, 2, 3
     ]);
-    baseStripeGeometry.setAttribute('position', new THREE.BufferAttribute(baseStripeVertices, 3));
-    baseStripeGeometry.setIndex(new THREE.BufferAttribute(baseStripeIndices, 1));
-    baseStripeGeometry.computeVertexNormals();
-
-    const baseStripe = new THREE.Mesh(baseStripeGeometry, materials.stripe);
-    house.add(baseStripe);
+    const baseStripe = createHouseComponent(baseStripeVertices, baseStripeIndices, materials.stripe);
 
     // Left Wall stripe (low border)
-    const leftStripeGeometry = new THREE.BufferGeometry();
     const leftStripeVertices = new Float32Array([
         HOUSE_SIDE_WALL_X + STRIPT_OFFSET, 0, HOUSE_MAIN_WALL_Z,
         HOUSE_SIDE_WALL_X + STRIPT_OFFSET, 0, -HOUSE_SIDE_WALL_LENGTH,
@@ -593,14 +545,32 @@ function createHouse(x, y, z, materials) {
         0, 1, 2,
         0, 2, 3
     ]);
-    leftStripeGeometry.setAttribute('position', new THREE.BufferAttribute(leftStripeVertices, 3));
-    leftStripeGeometry.setIndex(new THREE.BufferAttribute(leftStripeIndices, 1));
-    leftStripeGeometry.computeVertexNormals();
-
-    const leftStripe = new THREE.Mesh(leftStripeGeometry, materials.stripe);
-    house.add(leftStripe);
-
+    const leftStripe = createHouseComponent(leftStripeVertices, leftStripeIndices, materials.stripe);
+    
+    house.add(mainWall, sideWall, door, roof, rightWindow, leftWindow, baseStripe, leftStripe);
     scene.add(house);
+
+    materialTargets.house = {
+        frontWall: mainWall,
+        sideWall: sideWall,
+        roof: roof,
+        door: door,
+        rightWindow: rightWindow,
+        leftWindow: leftWindow,
+        baseStripe: baseStripe,
+        leftStripe: leftStripe
+    };
+}
+
+function createHouseComponent(vertices, indices, material) {
+    const geometry = new THREE.BufferGeometry();
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+    geometry.computeVertexNormals();
+
+    const component = new THREE.Mesh(geometry, material);
+    return component;
 }
 
 function getHeightData(img, width, height) {
@@ -943,15 +913,18 @@ function switchMaterial(type) {
     }
 
     // Apply to house
-    // if (materialTargets.house) {
-    //     materialTargets.house.forEach(house => {
-    //         tree.debarked.material = materials.treeDebarked;
-    //         tree.barked.material = materials.treeBark;
-    //         tree.branch.material = materials.treeBark;
-    //         tree.foliage1.material = materials.treeFoliage;
-    //         tree.foliage2.material = materials.treeFoliage;
-    //     });
-    // }
+    const house = materialTargets.house;
+    if (house) {
+        console.log("entrou")
+        house.frontWall.material = materials.house;
+        house.sideWall.material = materials.house;
+        house.roof.material = materials.roof;
+        house.door.material = materials.door;
+        house.rightWindow.material = materials.door;
+        house.leftWindow.material = materials.door;
+        house.baseStripe.material = materials.stripe;
+        house.leftStripe.material = materials.stripe;
+    }
 
     // Apply to terrain
     if (materialTargets.terrain) {
