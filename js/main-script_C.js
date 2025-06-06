@@ -218,57 +218,7 @@ function createScene() {
 /* CREATE CAMERA(S) */
 //////////////////////
 
-function createCamera() {
-    // FIXME: depois tirar a câmara ortogonal
-    orthoCamera = new THREE.OrthographicCamera(
-        -size * aspect, size * aspect,
-        size, -size,
-        1, 1000
-    );
-
-    setFixedPerspectiveView();
-}
-
-function setFrontView() {
-    orthoCamera.left = -size * aspect;
-    orthoCamera.right = size * aspect;
-    orthoCamera.top = size;
-    orthoCamera.bottom = -size;
-    orthoCamera.updateProjectionMatrix();
-
-    orthoCamera.position.set(0, 0, 100);
-    orthoCamera.lookAt(scene.position);
-
-    camera = orthoCamera;
-}
-
-function setSideView() {
-    orthoCamera.left = -size * aspect;
-    orthoCamera.right = size * aspect;
-    orthoCamera.top = size;
-    orthoCamera.bottom = -size;
-    orthoCamera.updateProjectionMatrix();
-
-    orthoCamera.position.set(100, 0, 0);
-    orthoCamera.lookAt(scene.position);
-
-    camera = orthoCamera;
-}
-
-function setTopView() {
-    orthoCamera.left = -size * aspect;
-    orthoCamera.right = size * aspect;
-    orthoCamera.top = size;
-    orthoCamera.bottom = -size;
-    orthoCamera.updateProjectionMatrix();
-
-    orthoCamera.position.set(0, 100, 0);
-    orthoCamera.lookAt(scene.position);
-
-    camera = orthoCamera;
-}
-
-function setFixedPerspectiveView() {
+function createPerspectiveCamera() {
     perspectiveCamera = new THREE.PerspectiveCamera(70, aspect, 1, 1000);
     perspectiveCamera.position.set(CAMERA_X, CAMERA_Y, CAMERA_Z);
     perspectiveCamera.lookAt(CAMERA_TARGET_X, CAMERA_TARGET_Y, CAMERA_TARGET_Z);
@@ -466,7 +416,7 @@ function createSkydome(texture) {
     const geometrySky = new THREE.SphereGeometry(SKYDOME_RADIUS, SEGMENTS, SEGMENTS, 0, Math.PI * 2, 0, Math.PI / 2);
     const materialSky = new THREE.MeshBasicMaterial({
         map: texture,
-        side: THREE.BackSide // <- isto é importante para vermos por dentro, depois tirar quando estivermos lá dentro?
+        side: THREE.BackSide // Enables visibility from inside
     });
     skydome = new THREE.Mesh(geometrySky, materialSky);
     skydome.position.set(0, -SKYDOME_RADIUS / 2, 0);
@@ -992,7 +942,7 @@ function init() {
     enableVRmode();
 
     createScene();
-    createCamera();
+    createPerspectiveCamera();
 
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
@@ -1036,18 +986,8 @@ function onKeyDown(e) {
             // Only disable VR mode if the user is currently in a VR session 
             if (renderer.xr.isPresenting) {
                 disableVRmode();
-                setFixedPerspectiveView();
+                createPerspectiveCamera();
             }
-            setFixedPerspectiveView();      // TODO: remover antes de entregar, é só para funcionar com as camaras ortogonais
-            break;
-        case '8': // vai ser para tirar
-            setFrontView();
-            break;
-        case '9': // vai ser para tirar
-            setSideView();
-            break;
-        case '0': // vai ser para tirar
-            setTopView();
             break;
         case 'q':
         case 'Q':
