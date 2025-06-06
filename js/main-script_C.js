@@ -30,12 +30,11 @@ const PLANE_HEIGHT = SKYDOME_RADIUS * 2;
 // Trees
 const TRUNK_RADIUS = 1;
 const BRANCH_RADIUS = 0.5;
-const DEBARKED_HEIGHT = 4;
-const BARKED_HEIGHT = 8;
-const TREE_HEIGHT = DEBARKED_HEIGHT + BARKED_HEIGHT;
-const BRANCH_HEIGHT = TREE_HEIGHT / 1.5;
+const MIN_DEBARKED_HEIGHT = 2;
+const MAX_DEBARKED_HEIGHT = 4;
+const MIN_BARKED_HEIGHT = 5;
+const MAX_BARKED_HEIGHT = 12;
 const FOLIAGE_RADIUS = 4;
-const foliageY = TREE_HEIGHT * 1.1;
 
 // House
 const HOUSE_OFFSET_X = 55;
@@ -672,25 +671,32 @@ function createTree(x, y, z, materials) {
 
     const trunkGroup = new THREE.Group();
 
-    const debarkedGeometry = new THREE.CylinderGeometry(TRUNK_RADIUS * 0.8, TRUNK_RADIUS * 0.8, DEBARKED_HEIGHT);
+    // Generate random heights
+    const debarkedHeight = THREE.MathUtils.randFloat(MIN_DEBARKED_HEIGHT, MAX_DEBARKED_HEIGHT);
+    const barkedHeight = THREE.MathUtils.randFloat(MIN_BARKED_HEIGHT, MAX_BARKED_HEIGHT);
+
+    const debarkedGeometry = new THREE.CylinderGeometry(TRUNK_RADIUS * 0.8, TRUNK_RADIUS * 0.8, debarkedHeight);
     const debarked = new THREE.Mesh(debarkedGeometry, materials.debarked);
-    debarked.position.y = DEBARKED_HEIGHT / 2;
+    debarked.position.y = debarkedHeight / 2;
     trunkGroup.add(debarked);
 
-    const barkedGeometry = new THREE.CylinderGeometry(TRUNK_RADIUS, TRUNK_RADIUS, BARKED_HEIGHT);
+    const barkedGeometry = new THREE.CylinderGeometry(TRUNK_RADIUS, TRUNK_RADIUS, barkedHeight);
     const barked = new THREE.Mesh(barkedGeometry, materials.barked);
-    barked.position.y = DEBARKED_HEIGHT + BARKED_HEIGHT / 2;
+    barked.position.y = debarkedHeight + barkedHeight / 2;
     trunkGroup.add(barked);
 
-    const maxTilt = Math.PI / 6;
-    trunkGroup.rotation.z = Math.random() * maxTilt; // slight tilt
+    trunkGroup.rotation.z = Math.PI / 6 // slight tilt
     tree.add(trunkGroup);
+
+    const treeHeight = debarkedHeight + barkedHeight;
+    const branchHeight = treeHeight / 1.5;
+    const foliageY = treeHeight * 1.1;
 
     // Secondary branch
     const tilt = -trunkGroup.rotation.z;
-    const branchY = (Math.cos(tilt) * BRANCH_HEIGHT + Math.cos(-tilt) * TREE_HEIGHT) / 2;
+    const branchY = (Math.cos(tilt) * branchHeight + Math.cos(-tilt) * treeHeight) / 2;
 
-    const branchGeometry = new THREE.CylinderGeometry(BRANCH_RADIUS, BRANCH_RADIUS, BRANCH_HEIGHT);
+    const branchGeometry = new THREE.CylinderGeometry(BRANCH_RADIUS, BRANCH_RADIUS, branchHeight);
     const branch = new THREE.Mesh(branchGeometry, materials.branch);
     branch.position.set(0, branchY, 0);
     branch.rotation.z = tilt;     // opposite tilt
@@ -699,16 +705,17 @@ function createTree(x, y, z, materials) {
     // Canopy
     const foliage1 = new THREE.Mesh(new THREE.SphereGeometry(FOLIAGE_RADIUS), materials.foliage);
     foliage1.scale.set(1.2, 0.8, 1.0);  // flatten in y
-    foliage1.position.set(-Math.sin(trunkGroup.rotation.z) * TREE_HEIGHT, foliageY, 0);
+    foliage1.position.set(-Math.sin(trunkGroup.rotation.z) * treeHeight, treeHeight, 0);
     tree.add(foliage1);
 
     // Additional canopy ellipsoid
     const foliage2 = new THREE.Mesh(new THREE.SphereGeometry(FOLIAGE_RADIUS *0.8), materials.foliage);
     foliage2.scale.set(1.1, 0.7, 1.0);  // flatten in y
-    foliage2.position.set(-Math.sin(branch.rotation.z), foliageY * 0.9, 0);
+    foliage2.position.set(-Math.sin(branch.rotation.z), treeHeight * 0.9, 0);
     tree.add(foliage2);
 
     tree.position.set(x, y, z);
+    tree.rotation.y = Math.random() * Math.PI * 2;
     scene.add(tree);
     terrainDependentObjects.trees.push(tree);
     tree.userData.originalY = y; // Store the terrain-based Y for later restoration
@@ -729,12 +736,8 @@ function scatterTrees(treeMaterials) {
     const positions = [
         { x: -50, z: -30 }, { x: -10, z: 0 }, { x: 15, z: 15 }, { x: -50, z: 15 }, { x: -50, z: -50 },
         { x: -100, z: -20 }, { x: -60, z: -10 }, { x: 0, z: -15 }, { x: 30, z: 45 }, { x: -80, z: -40 },
-        { x: -30, z: 10 }, { x: -70, z: 25 }, { x: -20, z: -35 }, { x: 10, z: -10 }, { x: 5, z: 30 },
-        { x: -90, z: 0 }, { x: -40, z: 40 }, { x: 35, z: -25 }, { x: -25, z: 50 }, { x: -25, z: 100 },
-        { x: -5, z: -50 }, { x: 50, z: -60 }, { x: 75, z: 30 }, { x: 60, z: 70 }, { x: -85, z: 60 },
         { x: 20, z: -70 }, { x: -15, z: 80 }, { x: 90, z: -10 }, { x: 40, z: 90 }, { x: -65, z: 85 },
-        { x: 0, z: 100 }, { x: 100, z: 0 }, { x: 70, z: -40 }, { x: -100, z: 40 }, { x: 45, z: -90 },
-        { x: 85, z: -80 }
+        { x: 0, z: 100 }, { x: 100, z: 0 }, { x: 70, z: -40 }, { x: -100, z: 40 }
     ];
 
     const treeMeshes = [];
