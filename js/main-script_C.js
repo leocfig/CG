@@ -1,9 +1,5 @@
 import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { VRButton } from "three/addons/webxr/VRButton.js";
-import * as Stats from "three/addons/libs/stats.module.js";
-import { GUI } from "three/addons/libs/lil-gui.module.min.js";
-
 
 ///////////////
 /* CONSTANTS */
@@ -61,15 +57,15 @@ const WINDOW_LENGHT = 4;
 const STRIPT_HEIGHT = 3;
 const STRIPT_OFFSET = 0.05;     // to avoid z-fighting
 
-// Moon
-const MOON_RADIUS = 10;
-const MOON_OFFSET_X = - SKYDOME_RADIUS * 0.4;
-const MOON_OFFSET_Y = -SKYDOME_RADIUS / 2 + SKYDOME_RADIUS * 0.65;
-const MOON_OFFSET_Z = SKYDOME_RADIUS / 2;
-
 // Terrain
 const MAX_TERRAIN_HEIGHT = 25;
 const TERRAIN_OFFSET_Y = - SKYDOME_RADIUS / 2;
+
+// Moon
+const MOON_RADIUS = 10;
+const MOON_OFFSET_X = - SKYDOME_RADIUS * 0.4;
+const MOON_OFFSET_Y = TERRAIN_OFFSET_Y + SKYDOME_RADIUS * 0.65;
+const MOON_OFFSET_Z = SKYDOME_RADIUS / 2;
 
 // Ovni
 const OVNI_RADIUS = 8;
@@ -90,10 +86,13 @@ const MAX_OVNI_RADIUS = Math.sqrt(SKYDOME_RADIUS*SKYDOME_RADIUS - SKYDOME_RADIUS
 /* GLOBAL VARIABLES */
 //////////////////////
 
-const loader = new THREE.TextureLoader();
 const aspect = window.innerWidth / window.innerHeight;
-const size = 70;
-let scene, renderer, textureFloral, textureSky, skydome, moon, directionalLight, ovni;
+const loader = new THREE.TextureLoader();
+const clock = new THREE.Clock();
+let scene, renderer;
+let camera, perspectiveCamera;
+let textureFloral, textureSky, skydome, moon, directionalLight, ovni;
+let generateTexture, currentMaterial, calculateLighting, wasBasicMaterial;
 
 const materialLibrary = {
     lambert: {
@@ -182,15 +181,10 @@ const terrainDependentObjects = {
 
 const materialTargets = {};
 
-let camera, orthoCamera, perspectiveCamera;
-let heightData, img;
-let heightmapWidth, heightmapHeight;
-let generateTexture, currentMaterial, calculateLighting, wasBasicMaterial;
-const clock = new THREE.Clock();
-
 /////////////////////
 /* CREATE SCENE(S) */
 /////////////////////
+
 function createScene() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color('#FFFFFF'); // White
@@ -228,6 +222,7 @@ function createPerspectiveCamera() {
 /////////////////////
 /* CREATE LIGHT(S) */
 /////////////////////
+
 function createLight(x, y, z) {
     directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1.5);
     directionalLight.position.set(x, y, z);
@@ -387,13 +382,13 @@ function createTerrain(x, y, z, heightmap, terrainMaterial, treeMaterials, house
     // Register to global target
     materialTargets.terrain = terrain;
     
-    img = new Image();
+    const img = new Image();
     img.src = heightmap;
     img.onload = () => {
-        heightmapWidth = img.naturalWidth;
-        heightmapHeight = img.naturalHeight;
-        heightData = getHeightData(img, heightmapWidth, heightmapHeight);
-        scatterTrees(treeMaterials);
+        const heightmapWidth = img.naturalWidth;
+        const heightmapHeight = img.naturalHeight;
+        const heightData = getHeightData(img, heightmapWidth, heightmapHeight);
+        scatterTrees(heightData, heightmapWidth, heightmapHeight, treeMaterials);
 
         const baseY = getMinimumHeightOnRectangularPerimeter(
             HOUSE_OFFSET_X,
@@ -408,7 +403,7 @@ function createTerrain(x, y, z, heightmap, terrainMaterial, treeMaterials, house
             MAX_TERRAIN_HEIGHT
         );
 
-        createHouse(HOUSE_OFFSET_X, baseY - SKYDOME_RADIUS / 2, HOUSE_OFFSET_Z, houseMaterials);
+        createHouse(HOUSE_OFFSET_X, baseY + TERRAIN_OFFSET_Y, HOUSE_OFFSET_Z, houseMaterials);
     };
 }
 
@@ -441,7 +436,6 @@ function createHouse(x, y, z, materials) {
         3, 4, 0
     ]);
     const roof = createHouseComponent(roofVertices, roofIndices, materials.roof);
-
     const mainWall = createRectPlane(
         HOUSE_MAIN_WALL_LENGTH,
         HOUSE_MAIN_WALL_HEIGHT,
@@ -449,7 +443,6 @@ function createHouse(x, y, z, materials) {
         materials.house,
         new THREE.Vector3(0, 0, HOUSE_MAIN_WALL_Z)
     );
-
     const sideWall = createRectPlane(
         HOUSE_SIDE_WALL_LENGTH,
         HOUSE_MAIN_WALL_HEIGHT,
@@ -458,7 +451,6 @@ function createHouse(x, y, z, materials) {
         new THREE.Vector3(HOUSE_SIDE_WALL_X, 0, 0),
         true
     );
-
     const door = createRectPlane(
         DOOR_LENGHT,
         DOOR_HEIGHT,
@@ -466,7 +458,6 @@ function createHouse(x, y, z, materials) {
         materials.door,
         new THREE.Vector3(0, 0, HOUSE_MAIN_WALL_Z)
     );
-
     const rightWindow = createRectPlane(
         WINDOW_LENGHT,
         WINDOW_HEIGHT,
@@ -474,7 +465,6 @@ function createHouse(x, y, z, materials) {
         materials.door,
         new THREE.Vector3(-HOUSE_MAIN_WALL_LENGTH / 3, HOUSE_MAIN_WALL_HEIGHT / 3, HOUSE_MAIN_WALL_Z)
     );
-
     const leftWindow = createRectPlane(
         WINDOW_LENGHT,
         WINDOW_HEIGHT,
@@ -482,7 +472,6 @@ function createHouse(x, y, z, materials) {
         materials.door,
         new THREE.Vector3(HOUSE_MAIN_WALL_LENGTH / 3, HOUSE_MAIN_WALL_HEIGHT / 3, HOUSE_MAIN_WALL_Z)
     );
-
     const baseStripe = createRectPlane(
         HOUSE_MAIN_WALL_LENGTH,
         STRIPT_HEIGHT,
@@ -490,7 +479,6 @@ function createHouse(x, y, z, materials) {
         materials.stripe,
         new THREE.Vector3(0, 0, HOUSE_MAIN_WALL_Z)
     );
-
     const leftStripe = createRectPlane(
         HOUSE_SIDE_WALL_LENGTH,
         STRIPT_HEIGHT,
@@ -577,8 +565,7 @@ function getHeightData(img, width, height) {
 // the minimum terrain height underneath it. Since terrain can be uneven, using only the center
 // height may cause parts of the object to float above ground.
 function getMinimumHeightOnRectangularPerimeter(centerX, centerZ, width, depth, samplesPerEdge,
-    heightData, heightmapWidth, heightmapHeight, planeWidth, maxHeight) {
-        
+    heightData, heightmapWidth, heightmapHeight, planeWidth, maxHeight) {        
     let minY = Infinity;
 
     function checkPoint(x, z) {
@@ -594,13 +581,10 @@ function getMinimumHeightOnRectangularPerimeter(centerX, centerZ, width, depth, 
 
         // Front edge (Z+)
         checkPoint(centerX - width / 2 + t * width, centerZ + depth / 2);
-
         // Back edge (Z-)
         checkPoint(centerX - width / 2 + t * width, centerZ - depth / 2);
-
         // Left edge (X-)
         checkPoint(centerX - width / 2, centerZ - depth / 2 + t * depth);
-
         // Right edge (X+)
         checkPoint(centerX + width / 2, centerZ - depth / 2 + t * depth);
     }
@@ -608,25 +592,20 @@ function getMinimumHeightOnRectangularPerimeter(centerX, centerZ, width, depth, 
     return minY;
 }
 
-
 function getHeightAt(x, z, heightData, heightmapWidth, heightmapHeight, planeSize, maxHeight) {
     const halfSize = planeSize / 2;
-
     const imgX = Math.floor((x + halfSize) / planeSize * heightmapWidth);
-    const imgZ = Math.floor((z + halfSize) / planeSize * heightmapHeight);
-
+    const imgZ = Math.floor((z + halfSize) / planeSize * heightmapHeight);    
     const clampedX = Math.max(0, Math.min(heightmapWidth - 1, imgX));
     const clampedZ = Math.max(0, Math.min(heightmapHeight - 1, imgZ));
-
     const index = clampedZ * heightmapWidth + clampedX;
-    const height = heightData[index]; // between 0 and 1
+    const heightRatio = heightData[index]; // between 0 and 1
 
-    return height * maxHeight;
+    return heightRatio * maxHeight;
 }
 
 function createTree(x, y, z, materials) {
     const tree = new THREE.Group();
-
     const trunkGroup = new THREE.Group();
 
     // Generate random heights
@@ -648,9 +627,8 @@ function createTree(x, y, z, materials) {
 
     const treeHeight = debarkedHeight + barkedHeight;
     const branchHeight = treeHeight / 1.5;
-    const foliageY = treeHeight * 1.1;
 
-    // Secondary branch
+    // Branch
     const tilt = -trunkGroup.rotation.z;
     const branchY = (Math.cos(tilt) * branchHeight + Math.cos(-tilt) * treeHeight) / 2;
 
@@ -688,7 +666,7 @@ function createTree(x, y, z, materials) {
     };
 }
 
-function scatterTrees(treeMaterials) {
+function scatterTrees(heightData, heightmapWidth, heightmapHeight, treeMaterials) {
 
     // Fixed x and z coordinates for the trees
     const positions = [
@@ -701,7 +679,7 @@ function scatterTrees(treeMaterials) {
     const treeMeshes = [];
     for (const pos of positions) {
         const y = getHeightAt(pos.x, pos.z, heightData, heightmapWidth, heightmapHeight, PLANE_WIDTH, MAX_TERRAIN_HEIGHT);
-        const meshes = createTree(pos.x, y - SKYDOME_RADIUS / 2, pos.z, treeMaterials);
+        const meshes = createTree(pos.x, y + TERRAIN_OFFSET_Y, pos.z, treeMaterials);
         treeMeshes.push(meshes);
     }
     materialTargets.trees = treeMeshes;
@@ -716,13 +694,13 @@ function createOvni(x, y, z, materials) {
     const body = new THREE.Mesh(bodyGeometry, materials.body);
     ovni.add(body);
 
-    // Cockpit ovni
+    // Cockpit
     const cockpitGeometry = new THREE.SphereGeometry(OVNI_COCKPIT_RADIUS, SEGMENTS, SEGMENTS, 0, Math.PI * 2, 0, Math.PI / 2);
     const cockpit = new THREE.Mesh(cockpitGeometry, materials.cockpit);
     cockpit.position.y = OVNI_HEIGHT / 2 ;
     ovni.add(cockpit);
 
-    // Spotlight
+    // Base
     const baseGeometry = new THREE.CylinderGeometry(OVNI_COCKPIT_RADIUS, OVNI_COCKPIT_RADIUS, OVNI_BASE_HEIGHT, SEGMENTS);
     const base = new THREE.Mesh(baseGeometry, materials.base);
     base.position.y = - OVNI_HEIGHT / 2;
@@ -738,18 +716,16 @@ function createOvni(x, y, z, materials) {
     ovni.position.set(x, y, z);
     scene.add(ovni);
 
-    // Small lights and center spotlight
+    // Small radial lights
     ovni.pointLights = createOvniLights(-OVNI_HEIGHT * 0.65, body);
     // Create a spotlight to shine down from the base
-    const spotlight = new THREE.SpotLight(0xffffff, 5, SKYDOME_RADIUS / 2, Math.PI / 6, 0.5, 0);
+    const spotlight = new THREE.SpotLight(0xffffff, 5, TERRAIN_OFFSET_Y, Math.PI / 6, 0.5, 0);
     spotlight.position.set(0, -OVNI_BASE_HEIGHT/2, 0);
-
-    // Set the target of the spotlight (you can move this target if needed)
     const target = new THREE.Object3D();
-    target.position.set(0, -SKYDOME_RADIUS / 2, 0); // Downward in local space mudar para n tar hardcoded
+    target.position.set(0, TERRAIN_OFFSET_Y, 0);
     spotlight.target = target;
 
-    // Add spotlight to the UFO group
+    // Attach spotlight to the UFO
     base.add(spotlight);
     base.add(spotlight.target);
     ovni.spotLight = spotlight;
@@ -762,16 +738,6 @@ function createOvni(x, y, z, materials) {
         ArrowRight: false,
     };
 }
-
-//////////////////////
-/* CHECK COLLISIONS */
-//////////////////////
-
-
-///////////////////////
-/* HANDLE COLLISIONS */
-///////////////////////
-
 
 ////////////
 /* UPDATE */
@@ -810,7 +776,7 @@ function updateLights(lights, lightsOn) {
 }
 
 function updateOvni(delta){
-    ovni.rotation.y += OVNI_ROTATION_SPEED * delta; // rotation 
+    ovni.rotation.y += OVNI_ROTATION_SPEED * delta;
     const movement = new THREE.Vector3(0, 0, 0);
 
     if (ovni.movementVector['ArrowUp'])      movement.z -= OVNI_SPEED * delta;
@@ -854,7 +820,7 @@ function switchMaterial(type) {
     if (wasBasicMaterial && !isBasic) {             // If it's switching from basic to non basic
         updateTerrainObjectHeights(true);           // Restore original Y
     } else if (!wasBasicMaterial && isBasic) {      // If it's switching from non basic to basic
-        updateTerrainObjectHeights(false);          // Set Y = TERRAIN_OFFSET_Y
+        updateTerrainObjectHeights(false);          // Set the same Y for all objects (flat terrain)
     }                                               // Otherwise, the y position is not updated
 
     // Apply to moon
