@@ -12,8 +12,5 @@ Goal: Scene with skydome, terrain, trees, house and a UFO
 
 Grade: 3.75/4.0
 
-Motivation of deduction -  Terrain relief barely visible, only noticeable at edges.
-&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; 'S' key malfunctioning.
-&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; Material differences too subtle.
-&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; Parameters need adjustment for better contrast.
-&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; VR not working properly.
+Motivation of deduction -  Terrain relief barely visible, only noticeable at edges; 'S' key malfunctioning; 
+Material differences too subtle; Parameters need adjustment for better contrast; VR not working properly.
