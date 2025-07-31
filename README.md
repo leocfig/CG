@@ -11,6 +11,7 @@ Grade: 4.0/4.0
 Goal: Scene with skydome, terrain, trees, house and a UFO
 
 Grade: 3.75/4.0
+
 Motivation of deduction -  Terrain relief barely visible, only noticeable at edges.
 &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; 'S' key malfunctioning.
 &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; Material differences too subtle.
